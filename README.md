@@ -12,6 +12,9 @@ Implemented:
 
 - Mouser Search API keyword search
 - DigiKey ProductInformation V4 keyword search
+- bounded multi-query expansion from category and visual hints
+- cross-supplier candidate ranking, de-duplication, and constraint filtering
+- live lookup, comparison, alternate suggestion, and BOM enrichment flows
 - Image-observation normalization through `extract_visual_part_hints`
 - Local rate-limit metadata and guardrails
 - Codex plugin wrapper and skill
@@ -20,10 +23,9 @@ Implemented:
 Planned:
 
 - AliExpress marketplace adapter
-- richer part-number lookup
-- alternate-part scoring
-- BOM enrichment
 - supplier-specific datasheet and lifecycle enrichment
+- deeper electrical/mechanical parameter extraction from supplier attributes
+- stronger alternate-part scoring from package, pinout, ratings, and lifecycle data
 
 ## Process Flow
 
@@ -40,8 +42,9 @@ flowchart TD
   G --> J["Normalize candidates"]
   H --> J
   I --> J
-  J --> K["Rank by fit, stock, price, lifecycle, confidence"]
-  K --> L["Agent explains likely matches and verification steps"]
+  J --> K["Merge duplicate MPNs across suppliers"]
+  K --> M["Score by exact match, visual hints, constraints, stock, price, lifecycle"]
+  M --> L["Agent explains likely matches and verification steps"]
 ```
 
 ### Image-Based Search Flow
@@ -86,6 +89,19 @@ The resulting search should be verified against dimensions, datasheets, pinout, 
 - `enrich_bom`: enrich BOM-like rows.
 
 Version 0.1 is read-only. It must not place orders, create carts, call dropshipping/order APIs, or mutate supplier accounts.
+
+### Search Quality Behavior
+
+The MCP now improves rough searches before returning results:
+
+- builds up to three bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
+- ranks exact manufacturer or supplier part-number matches above loose keyword matches
+- merges duplicate candidates that share the same normalized manufacturer part number
+- filters hard constraints such as manufacturer, required terms, forbidden terms, max unit price, max MOQ, RoHS, and stock
+- boosts useful sourcing evidence such as stock, datasheet, product URL, pricing, and visual-hint matches
+- lowers confidence for obsolete/discontinued lifecycle text and marketplace results unless marketplace use is explicitly allowed
+
+The same ranked search foundation powers `lookup_part`, `compare_parts`, `suggest_alternates`, and `enrich_bom`.
 
 ## Requirements
 
@@ -300,6 +316,7 @@ Run MCP stdio smoke tests:
 ```bash
 npm run smoke:mcp
 npm run smoke:mcp-digikey
+npm run smoke:mcp-workflows
 ```
 
 DigiKey production override example:
@@ -351,4 +368,3 @@ npm audit
 ## License
 
 MIT.
-

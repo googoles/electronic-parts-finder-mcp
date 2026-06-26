@@ -20,6 +20,7 @@
     "smoke:digikey": "tsx scripts/smoke-digikey-categories.ts",
     "smoke:mcp-digikey": "tsx scripts/smoke-mcp-digikey.ts",
     "smoke:mcp": "tsx scripts/smoke-mcp-search.ts",
+    "smoke:mcp-workflows": "tsx scripts/smoke-mcp-workflows.ts",
     "smoke:mouser": "tsx scripts/smoke-mouser-categories.ts",
     "start": "node dist/index.js",
     "test": "vitest run"

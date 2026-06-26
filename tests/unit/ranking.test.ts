@@ -196,6 +196,17 @@ describe("search ranking", () => {
 
     expect(plan.queries[0]).toBe("2.54mm pitch 20 pin IDC connector");
     expect(plan.notes.join(" ")).not.toContain("exact-looking part number");
+    expect(plan.notes.join(" ")).not.toContain("joined part-number");
+  });
+
+  it("joins split OCR-like part number tokens into an exact query", () => {
+    const plan = buildSearchPlan({
+      query: "STM32 C552 RET6",
+      limit: 10
+    });
+
+    expect(plan.queries).toContain("STM32C552RET6");
+    expect(plan.notes.join(" ")).toContain("joined part-number query");
   });
 
   it("builds compact connector query variants from row count and pitch", () => {

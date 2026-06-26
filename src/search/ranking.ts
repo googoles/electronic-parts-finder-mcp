@@ -105,6 +105,12 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
     notes.push(`Added exact-looking part number query: ${exactish}`);
   }
 
+  const joinedPartNumber = extractJoinedPartNumberCandidate(plannedInput.query);
+  if (joinedPartNumber && joinedPartNumber !== normalizePartNumber(exactish)) {
+    addQuery(joinedPartNumber);
+    notes.push(`Added joined part-number query from split/OCR text: ${joinedPartNumber}`);
+  }
+
   return {
     queries: queries.slice(0, 4),
     notes
@@ -751,6 +757,22 @@ function extractExactishPartNumber(value: string): string | undefined {
     .map((candidate) => candidate.trim())
     .filter((candidate) => /[0-9]/.test(candidate) && /[A-Z]/i.test(candidate) && !isUnitLikeToken(candidate))
     .sort((a, b) => b.length - a.length)[0];
+}
+
+function extractJoinedPartNumberCandidate(value: string): string | undefined {
+  const tokens = value.match(/\b[A-Z0-9]{2,10}\b/gi) ?? [];
+  const partTokens = tokens
+    .map((token) => token.toUpperCase())
+    .filter((token) => /[A-Z]/.test(token) && !isUnitLikeToken(token));
+  if (partTokens.length < 2 || partTokens.length > 5) {
+    return undefined;
+  }
+
+  const joined = partTokens.join("");
+  if (joined.length < 8 || joined.length > 32 || !/[A-Z]{2,}/.test(joined) || !/\d{2,}/.test(joined)) {
+    return undefined;
+  }
+  return joined;
 }
 
 function isUnitLikeToken(value: string): boolean {

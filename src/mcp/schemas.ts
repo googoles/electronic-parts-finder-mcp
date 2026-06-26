@@ -10,7 +10,11 @@ export const VisualPartHintsSchema = z
     pinCount: z.number().int().positive().optional(),
     pinLayout: z.string().optional(),
     connectorPinCount: z.number().int().positive().optional(),
+    connectorRowCount: z.number().int().positive().optional(),
     connectorPitchMm: z.number().positive().optional(),
+    connectorGender: z.string().optional(),
+    connectorMountingStyle: z.string().optional(),
+    connectorFamily: z.string().optional(),
     color: z.array(z.string()).optional(),
     dimensionsMm: z
       .object({

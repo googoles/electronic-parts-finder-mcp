@@ -38,6 +38,12 @@ type DigiKeyProduct = {
   Category?: { Name?: string; Parent?: { Name?: string } };
   Categories?: Array<{ Name?: string }>;
   PackageType?: { Name?: string };
+  Parameters?: Array<{
+    ParameterText?: string;
+    ValueText?: string;
+    Parameter?: string;
+    Value?: string;
+  }>;
   StandardPricing?: DigiKeyPriceBreak[];
   ProductVariations?: Array<{
     DigiKeyProductNumber?: string;
@@ -259,7 +265,7 @@ function toCandidate(product: DigiKeyProduct): PartCandidate {
       rohs: product.RoHSCompliant === true || product.RohsStatus?.toLowerCase().includes("compliant") ? "yes" : "unknown",
       reach: product.ReachStatus ? "unknown" : undefined
     },
-    specs: {},
+    specs: specsFromParameters(product.Parameters),
     source: {
       fetchedAt: new Date().toISOString(),
       supplierApi: "digikey-productinformation-v4-keyword-sandbox"
@@ -281,6 +287,21 @@ function toCandidate(product: DigiKeyProduct): PartCandidate {
       ]
     }
   };
+}
+
+function specsFromParameters(
+  parameters: DigiKeyProduct["Parameters"]
+): Record<string, string | number | boolean> {
+  const specs: Record<string, string | number | boolean> = {};
+  for (const parameter of parameters ?? []) {
+    const key = parameter.ParameterText ?? parameter.Parameter;
+    const value = parameter.ValueText ?? parameter.Value;
+    if (!key || !value) {
+      continue;
+    }
+    specs[key] = value;
+  }
+  return specs;
 }
 
 function scoreDigiKeyCandidate(part: NormalizedPart): number {

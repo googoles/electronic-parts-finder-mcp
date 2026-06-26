@@ -32,6 +32,7 @@ When the user provides an image, use vision first and extract searchable hints b
 - visible text, logos, top markings, and polarity marks
 - package type, pin count, pin layout, and lead style
 - connector pin count, pitch, keying, latch style, shell shape, and color
+- connector row count, family, gender/type, mounting style, and orientation when visible
 - cable wire count, length estimate, connector family, and jacket markings
 - motor body size, shaft diameter, gearhead, encoder, wire count, and connector type
 - board context, such as nearby crystal, regulator, isolation slot, motor driver, CAN/RS-485 transceiver, USB, screw terminal, or power input
@@ -39,7 +40,7 @@ When the user provides an image, use vision first and extract searchable hints b
 
 Call `extract_visual_part_hints` with those observations, then pass the returned draft or refined hints into `search_parts`. Treat image-derived matches as tentative until verified by datasheet, exact markings, or measured dimensions.
 
-For connector images, search quality improves when you include row count and pitch in the query text or visual hints. For example, prefer `2x10 IDC box header 2.54mm ARM JTAG` over only `black connector`.
+For connector images, search quality improves when you include row count, pitch, connector family, mounting style, and gender/type in the query text or visual hints. For example, prefer `2x10 IDC box header 2.54mm ARM JTAG through hole header` over only `black connector`.
 
 ## Rate Limits
 

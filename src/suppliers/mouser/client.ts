@@ -24,6 +24,10 @@ type MouserPart = {
   Min?: string;
   MouserPartNumber?: string;
   PriceBreaks?: MouserPriceBreak[];
+  ProductAttributes?: Array<{
+    AttributeName?: string;
+    AttributeValue?: string;
+  }>;
   ProductDetailUrl?: string;
   ROHSStatus?: string;
 };
@@ -171,7 +175,7 @@ function toCandidate(part: MouserPart): PartCandidate {
     compliance: {
       rohs: part.ROHSStatus?.toLowerCase().includes("compliant") ? "yes" : "unknown"
     },
-    specs: {},
+    specs: specsFromAttributes(part.ProductAttributes),
     source: {
       fetchedAt: new Date().toISOString(),
       supplierApi: "mouser-search-keyword"
@@ -193,6 +197,19 @@ function toCandidate(part: MouserPart): PartCandidate {
       ]
     }
   };
+}
+
+function specsFromAttributes(
+  attributes: MouserPart["ProductAttributes"]
+): Record<string, string | number | boolean> {
+  const specs: Record<string, string | number | boolean> = {};
+  for (const attribute of attributes ?? []) {
+    if (!attribute.AttributeName || !attribute.AttributeValue) {
+      continue;
+    }
+    specs[attribute.AttributeName] = attribute.AttributeValue;
+  }
+  return specs;
 }
 
 function scoreMouserCandidate(part: NormalizedPart): number {

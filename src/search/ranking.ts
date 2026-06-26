@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { SearchPartsInputSchema } from "../mcp/schemas.js";
+import { extractPartFeatures, pitchMatches } from "./part-features.js";
 
 type SearchPartsInput = z.infer<typeof SearchPartsInputSchema>;
 
@@ -40,6 +41,14 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
   const queries = new Set<string>();
   queries.add(cleanWhitespace(input.query));
 
+  const visualQueries = visualQueryVariants(input);
+  for (const query of visualQueries) {
+    queries.add(query);
+  }
+  if (visualQueries.length > 0) {
+    notes.push(`Added visual connector query variants: ${visualQueries.join(" | ")}`);
+  }
+
   const hintTerms = visualHintTerms(input);
   if (hintTerms.length > 0) {
     queries.add(cleanWhitespace([input.query, ...hintTerms.slice(0, 4)].join(" ")));
@@ -58,7 +67,7 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
   }
 
   return {
-    queries: Array.from(queries).filter(Boolean).slice(0, 3),
+    queries: Array.from(queries).filter(Boolean).slice(0, 4),
     notes
   };
 }
@@ -247,6 +256,12 @@ function scoreCandidate(candidate: PartCandidate, input: SearchPartsInput): Matc
     matched.push(`visual hints: ${visualMatches.join(", ")}`);
   }
 
+  const featureMatch = scoreVisualFeatureMatches(candidate, input);
+  score += featureMatch.score;
+  matched.push(...featureMatch.matched);
+  missing.push(...featureMatch.missing);
+  warnings.push(...featureMatch.warnings);
+
   if (candidate.datasheetUrl) {
     score += 6;
     matched.push("datasheet available");
@@ -338,8 +353,14 @@ function visualHintTerms(input: Pick<SearchPartsInput, "visualHints" | "category
       hints.pinLayout,
       hints.connectorPinCount ? `${hints.connectorPinCount} pin` : undefined,
       hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
+      hints.connectorRowCount ? `${hints.connectorRowCount} row` : undefined,
+      hints.connectorRowCount === 2 ? "dual row" : undefined,
       hints.connectorPitchMm ? `${hints.connectorPitchMm}mm` : undefined,
       hints.connectorPitchMm ? `${hints.connectorPitchMm} mm pitch` : undefined,
+      hints.connectorPitchMm && pitchMatches(hints.connectorPitchMm, 2.54) ? "0.100 inch pitch" : undefined,
+      hints.connectorGender,
+      hints.connectorMountingStyle,
+      hints.connectorFamily,
       hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
       hints.motorHints?.gearhead ? "gear motor" : undefined,
@@ -349,6 +370,139 @@ function visualHintTerms(input: Pick<SearchPartsInput, "visualHints" | "category
       input.categoryHint
     ].filter((term): term is string => Boolean(term))
   );
+}
+
+function visualQueryVariants(input: SearchPartsInput): string[] {
+  const hints = input.visualHints;
+  if (!hints) {
+    return [];
+  }
+
+  const layout = compactConnectorLayout(hints.connectorRowCount, hints.connectorPinCount);
+  const familyOrShape = hints.connectorFamily ?? hints.packageShape ?? input.categoryHint;
+  const baseTerms = [
+    layout,
+    familyOrShape,
+    hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
+    hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
+    hints.connectorMountingStyle,
+    hints.connectorGender
+  ];
+  const primary = cleanWhitespace([input.query, ...baseTerms].filter(Boolean).join(" "));
+
+  const variants = [primary];
+  if (hints.connectorPitchMm && pitchMatches(hints.connectorPitchMm, 2.54)) {
+    variants.push(
+      cleanWhitespace(
+        [
+          input.query,
+          layout,
+          familyOrShape,
+          hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
+          "0.100 inch pitch",
+          hints.connectorMountingStyle,
+          hints.connectorGender
+        ]
+          .filter(Boolean)
+          .join(" ")
+      )
+    );
+  }
+
+  return unique(variants.filter((query) => query !== cleanWhitespace(input.query)));
+}
+
+function compactConnectorLayout(rowCount: number | undefined, pinCount: number | undefined): string | undefined {
+  if (!rowCount || !pinCount || pinCount % rowCount !== 0) {
+    return undefined;
+  }
+  return `${rowCount}x${pinCount / rowCount}`;
+}
+
+function scoreVisualFeatureMatches(candidate: PartCandidate, input: SearchPartsInput): {
+  score: number;
+  matched: string[];
+  missing: string[];
+  warnings: string[];
+} {
+  const hints = input.visualHints;
+  if (!hints) {
+    return { score: 0, matched: [], missing: [], warnings: [] };
+  }
+
+  const features = extractPartFeatures(candidate);
+  let score = 0;
+  const matched: string[] = [];
+  const missing: string[] = [];
+  const warnings: string[] = [];
+
+  const expectedPinCount = hints.connectorPinCount ?? hints.pinCount;
+  if (expectedPinCount) {
+    if (features.pinCounts.includes(expectedPinCount)) {
+      score += 14;
+      matched.push(`pin/position count: ${expectedPinCount}`);
+    } else if (features.pinCounts.length > 0) {
+      score -= 10;
+      missing.push(`pin/position count ${expectedPinCount}; candidate has ${features.pinCounts.join(", ")}`);
+    }
+  }
+
+  if (hints.connectorRowCount) {
+    if (features.rowCounts.includes(hints.connectorRowCount)) {
+      score += 8;
+      matched.push(`row count: ${hints.connectorRowCount}`);
+    } else if (features.rowCounts.length > 0) {
+      score -= 5;
+      missing.push(`row count ${hints.connectorRowCount}; candidate has ${features.rowCounts.join(", ")}`);
+    }
+  }
+
+  if (hints.connectorPitchMm) {
+    const pitchMatch = features.pitchMm.find((pitch) => pitchMatches(pitch, hints.connectorPitchMm ?? 0));
+    if (pitchMatch) {
+      score += 14;
+      matched.push(`pitch: ${pitchMatch}mm`);
+    } else if (features.pitchMm.length > 0) {
+      score -= 8;
+      missing.push(`pitch ${hints.connectorPitchMm}mm; candidate has ${features.pitchMm.join(", ")}mm`);
+    }
+  }
+
+  if (hints.connectorMountingStyle) {
+    const expected = normalizeText(hints.connectorMountingStyle);
+    const hit = features.mountingStyles.some((style) => normalizeText(style).includes(expected) || expected.includes(normalizeText(style)));
+    if (hit) {
+      score += 8;
+      matched.push(`mounting style: ${hints.connectorMountingStyle}`);
+    } else if (features.mountingStyles.length > 0) {
+      warnings.push(`Mounting style may differ: expected ${hints.connectorMountingStyle}, candidate hints ${features.mountingStyles.join(", ")}.`);
+    }
+  }
+
+  if (hints.connectorGender) {
+    const expected = normalizeText(hints.connectorGender);
+    const hit = features.genders.some((gender) => normalizeText(gender).includes(expected) || expected.includes(normalizeText(gender)));
+    if (hit) {
+      score += 6;
+      matched.push(`connector gender/type: ${hints.connectorGender}`);
+    }
+  }
+
+  if (hints.connectorFamily) {
+    const expected = normalizeText(hints.connectorFamily);
+    const hit = features.connectorFamilies.some((family) => normalizeText(family).includes(expected) || expected.includes(normalizeText(family)));
+    if (hit) {
+      score += 8;
+      matched.push(`connector family: ${hints.connectorFamily}`);
+    }
+  }
+
+  return {
+    score,
+    matched,
+    missing,
+    warnings
+  };
 }
 
 function positiveStockText(stockText: string | undefined): boolean {

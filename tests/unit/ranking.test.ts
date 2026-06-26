@@ -71,9 +71,39 @@ describe("search ranking", () => {
     });
 
     expect(plan.queries.length).toBeGreaterThan(1);
-    expect(plan.queries.length).toBeLessThanOrEqual(3);
+    expect(plan.queries.length).toBeLessThanOrEqual(4);
     expect(plan.queries.join(" ")).toContain("20 pin");
     expect(plan.queries.join(" ")).toContain("2.54mm");
+  });
+
+  it("matches visual connector hints against supplier wording variants", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "MATCH-20",
+          description: "CONN HEADER IDC 20POS 2ROW 0.100\" GOLD through hole box header"
+        }),
+        candidate({
+          manufacturerPartNumber: "MISS-12",
+          description: "CONN HEADER IDC 12 Position 2.00mm surface mount"
+        })
+      ],
+      {
+        query: "debug connector",
+        visualHints: {
+          connectorPinCount: 20,
+          connectorRowCount: 2,
+          connectorPitchMm: 2.54,
+          connectorFamily: "IDC",
+          connectorMountingStyle: "through hole"
+        },
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("MATCH-20");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("pin/position count: 20");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("pitch:");
   });
 
   it("does not treat measurement units as exact part-number queries", () => {
@@ -83,6 +113,22 @@ describe("search ranking", () => {
     });
 
     expect(plan.queries).toEqual(["2.54mm pitch 20 pin IDC connector"]);
+  });
+
+  it("builds compact connector query variants from row count and pitch", () => {
+    const plan = buildSearchPlan({
+      query: "black programming connector",
+      visualHints: {
+        connectorPinCount: 20,
+        connectorRowCount: 2,
+        connectorPitchMm: 2.54,
+        connectorFamily: "IDC box header"
+      },
+      limit: 10
+    });
+
+    expect(plan.queries.some((query) => query.includes("2x10"))).toBe(true);
+    expect(plan.queries.some((query) => query.includes("0.100 inch pitch"))).toBe(true);
   });
 });
 

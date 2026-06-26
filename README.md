@@ -68,7 +68,10 @@ Example:
   "visibleText": ["3V3", "GND", "RST", "A0", "Mini USB"],
   "packageShape": "black shrouded dual-row box header with key slot",
   "connectorPinCount": 20,
+  "connectorRowCount": 2,
   "connectorPitchMm": 2.54,
+  "connectorFamily": "IDC box header",
+  "connectorMountingStyle": "through hole",
   "boardContext": [
     "STM32 style development board",
     "JTAG or SWD debug/programming connector",
@@ -94,11 +97,12 @@ Version 0.1 is read-only. It must not place orders, create carts, call dropshipp
 
 The MCP now improves rough searches before returning results:
 
-- builds up to three bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
+- builds up to four bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
 - ranks exact manufacturer or supplier part-number matches above loose keyword matches
 - merges duplicate candidates that share the same normalized manufacturer part number
 - filters hard constraints such as manufacturer, required terms, forbidden terms, max unit price, max MOQ, RoHS, and stock
-- boosts useful sourcing evidence such as stock, datasheet, product URL, pricing, and visual-hint matches
+- extracts supplier attributes/parameters into normalized specs when available
+- boosts useful sourcing evidence such as stock, datasheet, product URL, pricing, visual-hint matches, pin count, row count, pitch, mounting style, and connector family
 - lowers confidence for obsolete/discontinued lifecycle text and marketplace results unless marketplace use is explicitly allowed
 
 The same ranked search foundation powers `lookup_part`, `compare_parts`, `suggest_alternates`, and `enrich_bom`.

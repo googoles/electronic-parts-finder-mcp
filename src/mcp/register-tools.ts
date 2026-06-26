@@ -52,6 +52,10 @@ function jsonResult(value: Record<string, unknown>) {
   };
 }
 
+function formatMm(value: number): string {
+  return `${Number(value.toFixed(3))}mm`;
+}
+
 type SupplierSearchResult = {
   candidates: PartCandidate[];
   rawCount: number;
@@ -249,6 +253,10 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
         input.cableWireCount ? `${input.cableWireCount} wire cable` : undefined,
         input.motorHints?.hasEncoder ? "encoder motor" : undefined,
         input.motorHints?.gearhead ? "gear motor" : undefined,
+        input.motorHints?.shaftDiameterMm ? `${formatMm(input.motorHints.shaftDiameterMm)} shaft` : undefined,
+        input.motorHints?.bodyDiameterMm ? `${formatMm(input.motorHints.bodyDiameterMm)} motor diameter` : undefined,
+        input.motorHints?.bodyLengthMm ? `${formatMm(input.motorHints.bodyLengthMm)} motor length` : undefined,
+        input.motorHints?.connectorType,
         ...(input.boardContext ?? [])
       ].filter((term): term is string => Boolean(term));
       const draftQuery = [input.userGoal, ...queryTerms].filter(Boolean).join(" ");

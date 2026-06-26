@@ -264,6 +264,62 @@ describe("search ranking", () => {
     expect(plan.queries.some((query) => query.includes("2x10"))).toBe(true);
     expect(plan.queries.some((query) => query.includes("0.100 inch pitch"))).toBe(true);
   });
+
+  it("builds motor search variants from shaft and body dimensions", () => {
+    const plan = buildSearchPlan({
+      query: "small encoder gear motor",
+      visualHints: {
+        motorHints: {
+          hasEncoder: true,
+          gearhead: true,
+          shaftDiameterMm: 6,
+          bodyDiameterMm: 37,
+          bodyLengthMm: 50,
+          connectorType: "JST"
+        }
+      },
+      limit: 10
+    });
+
+    const text = plan.queries.join(" ");
+    expect(text).toContain("6mm shaft");
+    expect(text).toContain("37mm diameter");
+    expect(text).toContain("50mm length");
+    expect(text).toContain("JST");
+  });
+
+  it("uses motor dimensions as ranking evidence", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "MOTOR-RIGHT",
+          description: "37mm diameter encoder gear motor 6mm shaft 50mm length JST connector"
+        }),
+        candidate({
+          manufacturerPartNumber: "MOTOR-WRONG",
+          description: "25mm diameter gear motor 3mm shaft lead wires"
+        })
+      ],
+      {
+        query: "encoder gear motor",
+        visualHints: {
+          motorHints: {
+            hasEncoder: true,
+            gearhead: true,
+            shaftDiameterMm: 6,
+            bodyDiameterMm: 37,
+            bodyLengthMm: 50,
+            connectorType: "JST"
+          }
+        },
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("MOTOR-RIGHT");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("6mm shaft");
+    expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("motor shaft diameter");
+  });
 });
 
 function candidate(overrides: Partial<PartCandidate>): PartCandidate {

@@ -453,6 +453,10 @@ function visualHintTerms(input: Pick<SearchPartsInput, "visualHints" | "category
       hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
       hints.motorHints?.gearhead ? "gear motor" : undefined,
+      hints.motorHints?.shaftDiameterMm ? `${formatMm(hints.motorHints.shaftDiameterMm)} shaft` : undefined,
+      hints.motorHints?.shaftDiameterMm ? `${formatMm(hints.motorHints.shaftDiameterMm)} shaft diameter` : undefined,
+      hints.motorHints?.bodyDiameterMm ? `${formatMm(hints.motorHints.bodyDiameterMm)} motor diameter` : undefined,
+      hints.motorHints?.bodyLengthMm ? `${formatMm(hints.motorHints.bodyLengthMm)} motor length` : undefined,
       hints.motorHints?.connectorType,
       ...(hints.color ?? []),
       ...(hints.boardContext ?? []),
@@ -480,7 +484,11 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
       hints.connectorGender,
       hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
-      hints.motorHints?.gearhead ? "gear motor" : undefined
+      hints.motorHints?.gearhead ? "gear motor" : undefined,
+      hints.motorHints?.shaftDiameterMm ? `${formatMm(hints.motorHints.shaftDiameterMm)} shaft` : undefined,
+      hints.motorHints?.bodyDiameterMm ? `${formatMm(hints.motorHints.bodyDiameterMm)} diameter` : undefined,
+      hints.motorHints?.bodyLengthMm ? `${formatMm(hints.motorHints.bodyLengthMm)} length` : undefined,
+      hints.motorHints?.connectorType
     ]
       .filter(Boolean)
       .join(" ")
@@ -536,6 +544,9 @@ function relaxedVisualQueryVariants(input: SearchPartsInput): string[] {
     [
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
       hints.motorHints?.gearhead ? "gear motor" : undefined,
+      hints.motorHints?.shaftDiameterMm ? `${formatMm(hints.motorHints.shaftDiameterMm)} shaft` : undefined,
+      hints.motorHints?.bodyDiameterMm ? `${formatMm(hints.motorHints.bodyDiameterMm)} diameter` : undefined,
+      hints.motorHints?.bodyLengthMm ? `${formatMm(hints.motorHints.bodyLengthMm)} length` : undefined,
       hints.motorHints?.connectorType
     ],
     [hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined, genericFamily]
@@ -725,6 +736,14 @@ function buildVerificationChecklist(
   if (input.constraints?.mustHave?.length || input.constraints?.mustNotHave?.length) {
     checklist.add("Verify all must-have and forbidden terms against official specifications.");
   }
+  if (
+    hints?.motorHints?.shaftDiameterMm ||
+    hints?.motorHints?.bodyDiameterMm ||
+    hints?.motorHints?.bodyLengthMm ||
+    hints?.motorHints?.connectorType
+  ) {
+    checklist.add("Verify motor shaft diameter, body diameter/length, connector type, mounting pattern, voltage, speed, torque, and gear ratio.");
+  }
   if (candidate.datasheetUrl) {
     checklist.add("Open the datasheet and confirm electrical, mechanical, and environmental ratings.");
   } else {
@@ -782,6 +801,10 @@ function extractJoinedPartNumberCandidate(value: string): string | undefined {
 
 function isUnitLikeToken(value: string): boolean {
   return /^\d+(\.\d+)?\s*(mm|cm|m|in|v|vdc|vac|a|ma|w|kw|hz|khz|mhz|ghz|ohm|pf|nf|uf)$/i.test(value);
+}
+
+function formatMm(value: number): string {
+  return `${Number(value.toFixed(3))}mm`;
 }
 
 function tokenize(value: string): string[] {

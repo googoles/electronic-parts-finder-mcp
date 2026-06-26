@@ -132,6 +132,30 @@ describe("search ranking", () => {
     expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("pin/position count");
   });
 
+  it("ranks field Korean circular connector shorthand with inferred family, gender, and mounting", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "M12-RIGHT",
+          description: "M12 4 position female panel mount waterproof circular connector"
+        }),
+        candidate({
+          manufacturerPartNumber: "M12-WRONG",
+          description: "M12 5 position male cable mount waterproof circular connector"
+        })
+      ],
+      {
+        query: "M12 4핀 암형 패널형 방수 항공 커넥터",
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("M12-RIGHT");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("pin/position count: 4");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("mounting style: panel mount");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("connector gender/type: female");
+  });
+
   it("adds marketplace-specific verification caveats", () => {
     const ranked = rankAndFilterCandidates(
       [

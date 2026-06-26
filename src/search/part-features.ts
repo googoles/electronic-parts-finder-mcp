@@ -14,10 +14,15 @@ const connectorFamilyPatterns: Array<[RegExp, string]> = [
   [/\b(jtag|arm\s*20)\b/i, "ARM JTAG"],
   [/\bm12\b/i, "M12"],
   [/\bm8\b/i, "M8"],
+  [/\bm5\b/i, "M5"],
+  [/\bm23\b/i, "M23"],
   [/\bjst\b/i, "JST"],
   [/\bmolex\b/i, "Molex"],
   [/\bdupont\b/i, "Dupont"],
   [/\bterminal\s*block\b/i, "terminal block"],
+  [/\bspring\s*clamp\s*terminal\b|\bpush\s*in\s*terminal\b/i, "spring clamp terminal block"],
+  [/\bboard\s*to\s*board\b/i, "board-to-board connector"],
+  [/\bcable\s*gland\b/i, "cable gland"],
   [/\bbox\s*header\b/i, "box header"],
   [/\bpin\s*header\b/i, "pin header"]
 ];
@@ -26,8 +31,9 @@ const mountingPatterns: Array<[RegExp, string]> = [
   [/\b(panel|bulkhead|flange)\s*mount\b/i, "panel mount"],
   [/\bthrough\s*hole\b|\bthru\s*hole\b|\bth\b/i, "through hole"],
   [/\bsurface\s*mount\b|\bsmt\b|\bsmd\b/i, "surface mount"],
-  [/\bboard\s*mount\b/i, "board mount"],
+  [/\bboard\s*mount\b|\bpcb\s*mount\b/i, "board mount"],
   [/\bwire\s*to\s*board\b/i, "wire-to-board"],
+  [/\bboard\s*to\s*board\b/i, "board-to-board"],
   [/\bcable\s*mount\b|\bfree\s*hanging\b/i, "cable mount"]
 ];
 

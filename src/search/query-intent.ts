@@ -161,10 +161,15 @@ function extractConnectorFamily(text: string): string | undefined {
   const patterns: Array<[RegExp, string]> = [
     [/\bm12\b/i, "M12 circular connector"],
     [/\bm8\b/i, "M8 circular connector"],
+    [/\bm5\b/i, "M5 circular connector"],
+    [/\bm23\b/i, "M23 circular connector"],
     [/\bidc\b/i, "IDC"],
     [/\bbox\s*header\b/i, "box header"],
     [/\bpin\s*header\b/i, "pin header"],
     [/\bterminal\s*block\b|\bscrew\s*terminal\b/i, "terminal block"],
+    [/\bspring\s*clamp\s*terminal\b|\bpush\s*in\s*terminal\b/i, "spring clamp terminal block"],
+    [/\bboard\s*to\s*board\b/i, "board-to-board connector"],
+    [/\bcable\s*gland\b/i, "cable gland"],
     [/\bjst\b/i, "JST"],
     [/\bmolex\b/i, "Molex"],
     [/\bdupont\b/i, "Dupont"],
@@ -179,6 +184,7 @@ function extractMountingStyle(text: string): string | undefined {
     [/\bthrough\s*hole\b|\bthru\s*hole\b|\bth\b/i, "through hole"],
     [/\bsurface\s*mount\b|\bsmt\b|\bsmd\b/i, "surface mount"],
     [/\bboard\s*mount\b/i, "board mount"],
+    [/\bpcb\s*mount\b/i, "board mount"],
     [/\bcable\s*mount\b|\bfree\s*hanging\b/i, "cable mount"]
   ];
   return firstLabel(text, patterns);

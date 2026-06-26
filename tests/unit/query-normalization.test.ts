@@ -35,4 +35,27 @@ describe("query normalization", () => {
     expect(plan.queries.some((query) => query.includes("gear motor"))).toBe(true);
     expect(plan.notes.join(" ")).toContain("supplier-friendly normalized query");
   });
+
+  it("normalizes industrial automation and terminal-block field language", () => {
+    const normalized = normalizeSearchQueryForSuppliers("PLC 입출력 모듈 단자대 푸시인 24V 디지털 입력");
+
+    expect(normalized.normalizedQuery).toContain("PLC I/O module");
+    expect(normalized.normalizedQuery).toContain("screw terminal block");
+    expect(normalized.normalizedQuery).toContain("spring clamp terminal block");
+    expect(normalized.normalizedQuery).toContain("digital input module");
+    expect(normalized.addedTerms).toContain("industrial automation module");
+    expect(normalized.addedTerms).toContain("industrial terminal block");
+  });
+
+  it("normalizes common circular connector shorthand from field Korean", () => {
+    const variants = normalizedQueryVariants("M12 4핀 암형 패널형 방수 항공 커넥터");
+    const text = variants.join(" ");
+
+    expect(text).toContain("M12");
+    expect(text).toContain("4 pin");
+    expect(text).toContain("female");
+    expect(text).toContain("panel mount");
+    expect(text).toContain("waterproof");
+    expect(text).toContain("circular connector");
+  });
 });

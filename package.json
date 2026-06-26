@@ -1,0 +1,41 @@
+{
+  "name": "parts-finder-mcp",
+  "version": "0.1.0",
+  "description": "Read-only MCP server for sourcing and comparing electronics parts from distributor and marketplace APIs.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "parts-finder-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "plugins/codex/parts-finder",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "lint": "tsc --noEmit",
+    "smoke:digikey": "tsx scripts/smoke-digikey-categories.ts",
+    "smoke:mcp-digikey": "tsx scripts/smoke-mcp-digikey.ts",
+    "smoke:mcp": "tsx scripts/smoke-mcp-search.ts",
+    "smoke:mouser": "tsx scripts/smoke-mouser-categories.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

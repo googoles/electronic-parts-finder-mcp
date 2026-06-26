@@ -1,0 +1,25 @@
+{
+  "name": "parts-finder",
+  "version": "0.1.0",
+  "description": "Find, compare, and shortlist engineering parts from distributor and marketplace APIs.",
+  "author": {
+    "name": "Parts Finder Contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Parts Finder",
+    "shortDescription": "Search and compare engineering parts.",
+    "longDescription": "Find, compare, and shortlist embedded parts, cables, connectors, motors, sensors, modules, and related engineering components using read-only supplier APIs.",
+    "developerName": "Parts Finder Contributors",
+    "category": "Engineering",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Find parts for this hardware requirement.",
+      "Compare these part numbers.",
+      "Suggest alternates for this unavailable part."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

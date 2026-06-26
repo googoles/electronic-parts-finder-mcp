@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "parts-finder": {
+      "command": "node",
+      "args": [
+        "../../../dist/index.js"
+      ],
+      "env": {
+        "PARTS_FINDER_LOG_LEVEL": "info"
+      }
+    }
+  }
+}

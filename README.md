@@ -107,6 +107,7 @@ The MCP now improves rough searches before returning results:
 - adds compact supplier queries from inferred visual hints, such as connector family, pin count, pitch, gender, and mounting style
 - runs up to two relaxed fallback queries only when the initial ranked result set is empty, limiting extra API calls while improving recovery from over-specific searches
 - joins split OCR-like part-number tokens such as `STM32 C552 RET6` into exact supplier queries like `STM32C552RET6`
+- uses visible OCR text from images as search queries and ranking evidence, including joined top-marking part numbers
 - uses motor image hints such as shaft diameter, body diameter, body length, encoder, gearhead, and connector type in search expansion and ranking
 - uses general package dimensions such as length, width, and height in visual search expansion, ranking evidence, and verification checklists
 - scores candidates against those normalized terms too, so field-language searches can match English supplier descriptions more reliably

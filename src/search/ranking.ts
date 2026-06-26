@@ -438,6 +438,7 @@ function visualHintTerms(input: Pick<SearchPartsInput, "visualHints" | "category
 
   return unique(
     [
+      ...visibleTextTerms(hints.visibleText),
       hints.packageShape,
       hints.pinCount ? `${hints.pinCount} pin` : undefined,
       hints.pinLayout,
@@ -475,6 +476,7 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
 
   const layout = compactConnectorLayout(hints.connectorRowCount, hints.connectorPinCount);
   const familyOrShape = hints.connectorFamily ?? hints.packageShape ?? input.categoryHint;
+  const visibleTextQueries = visibleTextTerms(hints.visibleText).slice(0, 2);
   const compact = cleanWhitespace(
     [
       layout,
@@ -508,7 +510,7 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
   ];
   const primary = cleanWhitespace([input.query, ...baseTerms].filter(Boolean).join(" "));
 
-  const variants = [compact, primary];
+  const variants = [...visibleTextQueries, compact, primary];
   if (hints.connectorPitchMm && pitchMatches(hints.connectorPitchMm, 2.54)) {
     variants.push(
       cleanWhitespace(
@@ -589,6 +591,25 @@ function compactConnectorLayout(rowCount: number | undefined, pinCount: number |
     return undefined;
   }
   return `${rowCount}x${pinCount / rowCount}`;
+}
+
+function visibleTextTerms(visibleText: string[] | undefined): string[] {
+  const cleaned = (visibleText ?? [])
+    .map((text) => cleanWhitespace(text))
+    .filter((text) => text.length > 0);
+  if (cleaned.length === 0) {
+    return [];
+  }
+
+  const combined = cleanWhitespace(cleaned.join(" "));
+  return unique(
+    [
+      extractJoinedPartNumberCandidate(combined),
+      extractExactishPartNumber(combined),
+      combined,
+      ...cleaned
+    ].filter((term): term is string => Boolean(term))
+  ).slice(0, 8);
 }
 
 function dimensionTerms(dimensions: VisualHints["dimensionsMm"]): string[] {

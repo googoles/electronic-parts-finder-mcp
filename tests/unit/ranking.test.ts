@@ -371,6 +371,47 @@ describe("search ranking", () => {
     expect(ranked[0]?.match.matched.join(" ")).toContain("45mm x 18mm x 12mm");
     expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("overall length");
   });
+
+  it("uses visible OCR text as standalone search queries", () => {
+    const plan = buildSearchPlan({
+      query: "identify this IC",
+      visualHints: {
+        visibleText: ["STM32", "C552", "RET6"],
+        packageShape: "LQFP"
+      },
+      limit: 10
+    });
+
+    expect(plan.queries).toContain("STM32C552RET6");
+    expect(plan.queries.length).toBeLessThanOrEqual(4);
+    expect(plan.notes.join(" ")).toContain("visual connector query variants");
+  });
+
+  it("uses visible OCR text as ranking evidence", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "STM32C552RET6",
+          description: "LQFP STM32C552RET6 microcontroller"
+        }),
+        candidate({
+          manufacturerPartNumber: "STM32F103RET6",
+          description: "LQFP STM32 family microcontroller"
+        })
+      ],
+      {
+        query: "identify this IC",
+        visualHints: {
+          visibleText: ["STM32", "C552", "RET6"],
+          packageShape: "LQFP"
+        },
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("STM32C552RET6");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("STM32C552RET6");
+  });
 });
 
 function candidate(overrides: Partial<PartCandidate>): PartCandidate {

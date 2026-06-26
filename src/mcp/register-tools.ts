@@ -340,6 +340,9 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
           lifecycleStatus: item.bestMatch?.lifecycleStatus,
           datasheetUrl: item.bestMatch?.datasheetUrl,
           productUrl: item.bestMatch?.productUrl,
+          confidence: item.bestMatch?.match.confidence,
+          fitSummary: item.bestMatch?.match.fitSummary,
+          verificationChecklist: item.bestMatch?.match.verificationChecklist,
           warnings: item.bestMatch?.match.warnings ?? []
         })),
         warnings
@@ -439,6 +442,9 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
           lifecycleStatus: bestMatch.lifecycleStatus,
           datasheetUrl: bestMatch.datasheetUrl,
           productUrl: bestMatch.productUrl,
+          confidence: bestMatch.match.confidence,
+          fitSummary: bestMatch.match.fitSummary,
+          verificationChecklist: bestMatch.match.verificationChecklist,
           warnings: bestMatch.match.warnings
         });
       }

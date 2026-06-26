@@ -14,6 +14,7 @@ Implemented:
 - DigiKey ProductInformation V4 keyword search
 - AliExpress Open Platform signed read-only marketplace search adapter
 - in-memory TTL cache for repeated supplier searches
+- candidate confidence summaries and verification checklists
 - bounded multi-query expansion from category and visual hints
 - Korean and field-language query normalization for common part terms
 - automatic connector/motor hint inference from rough query text
@@ -103,6 +104,7 @@ The MCP now improves rough searches before returning results:
 - builds up to four bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
 - normalizes common Korean/field terms such as `2핀`, `커넥터`, `패널마운트`, `방수`, `기어모터`, and `엔코더` into supplier-friendly English search terms
 - infers pin count, row count, pitch, connector family, mounting style, color, wire count, and motor encoder/gearhead hints from rough query text
+- returns per-candidate `confidence`, `fitSummary`, and `verificationChecklist` fields to make sourcing decisions easier to audit
 - ranks exact manufacturer or supplier part-number matches above loose keyword matches
 - merges duplicate candidates that share the same normalized manufacturer part number
 - filters hard constraints such as manufacturer, required terms, forbidden terms, max unit price, max MOQ, RoHS, and stock
@@ -332,6 +334,7 @@ Run MCP stdio smoke tests:
 ```bash
 npm run smoke:mcp
 npm run smoke:mcp-cache
+npm run smoke:mcp-fit-summary
 npm run smoke:mcp-digikey
 npm run smoke:mcp-aliexpress
 npm run smoke:mcp-workflows

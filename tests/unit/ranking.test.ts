@@ -127,6 +127,38 @@ describe("search ranking", () => {
     expect(ranked[0]?.manufacturerPartNumber).toBe("RIGHT-2P");
     expect(ranked[0]?.match.matched.join(" ")).toContain("pin/position count: 2");
     expect(ranked[0]?.match.matched.join(" ")).toContain("pitch:");
+    expect(ranked[0]?.match.confidence).toMatch(/high|medium/);
+    expect(ranked[0]?.match.fitSummary).toContain("score");
+    expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("pin/position count");
+  });
+
+  it("adds marketplace-specific verification caveats", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          supplier: "aliexpress",
+          supplierPartNumber: "100500",
+          manufacturer: "Marketplace Store",
+          manufacturerPartNumber: "",
+          description: "M12 4 pin waterproof panel mount connector",
+          marketplace: {
+            sellerName: "Marketplace Store",
+            orderCount: 120,
+            productRating: 4.7
+          }
+        })
+      ],
+      {
+        query: "M12 4 pin waterproof panel mount connector",
+        constraints: {
+          marketplaceAllowed: true
+        },
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.match.confidence).not.toBe("high");
+    expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("marketplace listings");
   });
 
   it("does not treat measurement units as exact part-number queries", () => {
@@ -158,7 +190,7 @@ describe("search ranking", () => {
 
 function candidate(overrides: Partial<PartCandidate>): PartCandidate {
   return {
-    supplier: "digikey",
+    supplier: overrides.supplier ?? "digikey",
     supplierPartNumber: overrides.supplierPartNumber ?? overrides.manufacturerPartNumber ?? "DK-1",
     manufacturerPartNumber: overrides.manufacturerPartNumber ?? "MPN-1",
     manufacturer: overrides.manufacturer ?? "Example",
@@ -175,6 +207,7 @@ function candidate(overrides: Partial<PartCandidate>): PartCandidate {
     packaging: overrides.packaging,
     lifecycleStatus: overrides.lifecycleStatus,
     compliance: overrides.compliance ?? { rohs: "yes" },
+    marketplace: overrides.marketplace,
     specs: overrides.specs ?? {},
     source: {
       fetchedAt: "2026-06-26T00:00:00.000Z",

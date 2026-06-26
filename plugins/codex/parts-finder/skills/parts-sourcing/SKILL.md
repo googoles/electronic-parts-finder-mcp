@@ -61,11 +61,13 @@ For every recommendation, include:
 - supplier
 - manufacturer part number when available
 - supplier part number or listing ID
+- confidence and fit summary when returned
 - stock or availability text
 - price basis and currency when available
 - datasheet or product URL
 - fetched timestamp
 - caveats
+- verification checklist items that remain before purchase
 
 For alternates, call out package, pinout, voltage/current/power, firmware, certification, connector keying, mechanical fit, and marketplace authenticity risks.
 

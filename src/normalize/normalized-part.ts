@@ -47,5 +47,8 @@ export type PartCandidate = NormalizedPart & {
     missing: string[];
     warnings: string[];
     reasons: string[];
+    confidence?: "high" | "medium" | "low";
+    fitSummary?: string;
+    verificationChecklist?: string[];
   };
 };

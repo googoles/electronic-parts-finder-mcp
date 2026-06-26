@@ -133,15 +133,23 @@ export function compareCandidates(a: PartCandidate, b: PartCandidate): number {
 
 function applySearchScoring(candidate: PartCandidate, input: SearchPartsInput): RankedCandidate {
   const evidence = scoreCandidate(candidate, input);
+  const score = Math.max(0, Math.min(100, evidence.score));
+  const matched = unique([...candidate.match.matched, ...evidence.matched]);
+  const missing = unique([...candidate.match.missing, ...evidence.missing]);
+  const warnings = unique([...candidate.match.warnings, ...evidence.warnings]);
+  const reasons = unique([...candidate.match.reasons, ...evidence.reasons]);
   return {
     ...candidate,
-    score: Math.max(0, Math.min(100, evidence.score)),
+    score,
     match: {
       hardConstraintPass: evidence.hardConstraintPass,
-      matched: unique([...candidate.match.matched, ...evidence.matched]),
-      missing: unique([...candidate.match.missing, ...evidence.missing]),
-      warnings: unique([...candidate.match.warnings, ...evidence.warnings]),
-      reasons: unique([...candidate.match.reasons, ...evidence.reasons])
+      matched,
+      missing,
+      warnings,
+      reasons,
+      confidence: confidenceForCandidate(candidate, score, evidence.hardConstraintPass, warnings, missing),
+      fitSummary: buildFitSummary(candidate, score, evidence.hardConstraintPass, matched, missing, warnings),
+      verificationChecklist: buildVerificationChecklist(candidate, input, matched, missing, warnings)
     }
   };
 }
@@ -515,6 +523,90 @@ function scoreVisualFeatureMatches(candidate: PartCandidate, input: SearchPartsI
     missing,
     warnings
   };
+}
+
+function confidenceForCandidate(
+  candidate: PartCandidate,
+  score: number,
+  hardConstraintPass: boolean,
+  warnings: string[],
+  missing: string[]
+): "high" | "medium" | "low" {
+  if (candidate.marketplace) {
+    return score >= 70 && hardConstraintPass ? "medium" : "low";
+  }
+  if (!hardConstraintPass || missing.length >= 3 || warnings.some((warning) => /marketplace|lifecycle|obsolete|discontinued/i.test(warning))) {
+    return score >= 80 && hardConstraintPass ? "medium" : "low";
+  }
+  if (score >= 85) {
+    return "high";
+  }
+  if (score >= 60) {
+    return "medium";
+  }
+  return "low";
+}
+
+function buildFitSummary(
+  candidate: PartCandidate,
+  score: number,
+  hardConstraintPass: boolean,
+  matched: string[],
+  missing: string[],
+  warnings: string[]
+): string {
+  const confidence = confidenceForCandidate(candidate, score, hardConstraintPass, warnings, missing);
+  const strengths = matched.slice(0, 3).join("; ") || "supplier returned product metadata";
+  const caveats = [...missing, ...warnings].slice(0, 2).join("; ");
+  const prefix = `${confidence} confidence, score ${score}`;
+  const identity = [candidate.manufacturer, candidate.manufacturerPartNumber || candidate.supplierPartNumber]
+    .filter(Boolean)
+    .join(" ");
+  return caveats
+    ? `${prefix}: ${identity || candidate.description} matched ${strengths}. Check ${caveats}.`
+    : `${prefix}: ${identity || candidate.description} matched ${strengths}.`;
+}
+
+function buildVerificationChecklist(
+  candidate: PartCandidate,
+  input: SearchPartsInput,
+  matched: string[],
+  missing: string[],
+  warnings: string[]
+): string[] {
+  const checklist = new Set<string>();
+  const hints = input.visualHints;
+
+  if (candidate.manufacturerPartNumber || candidate.supplierPartNumber) {
+    checklist.add("Verify exact manufacturer and supplier part numbers on the supplier product page.");
+  }
+  if (hints?.connectorPinCount || matched.some((item) => /pin|position/i.test(item)) || missing.some((item) => /pin|position/i.test(item))) {
+    checklist.add("Verify connector pin/position count against the datasheet or measured part.");
+  }
+  if (hints?.connectorPitchMm || matched.some((item) => /pitch/i.test(item)) || missing.some((item) => /pitch/i.test(item))) {
+    checklist.add("Verify pitch, row count, gender/type, keying, latch, and mounting style before purchase.");
+  }
+  if (input.constraints?.mustHave?.length || input.constraints?.mustNotHave?.length) {
+    checklist.add("Verify all must-have and forbidden terms against official specifications.");
+  }
+  if (candidate.datasheetUrl) {
+    checklist.add("Open the datasheet and confirm electrical, mechanical, and environmental ratings.");
+  } else {
+    checklist.add("Find an official datasheet or manufacturer page before final selection.");
+  }
+  if (candidate.availability.inStockQuantity !== undefined || candidate.availability.stockText) {
+    checklist.add("Confirm stock quantity, packaging, MOQ, lead time, and price breaks at the requested order quantity.");
+  }
+  if (candidate.lifecycleStatus || warnings.some((warning) => /lifecycle|obsolete|discontinued/i.test(warning))) {
+    checklist.add("Check lifecycle status and recommended replacement notices.");
+  }
+  if (candidate.marketplace || warnings.some((warning) => /marketplace/i.test(warning))) {
+    checklist.add("For marketplace listings, verify seller reputation, exact variant/options, authenticity, shipping, and return terms.");
+  }
+  if (candidate.compliance?.rohs || input.constraints?.rohsOnly) {
+    checklist.add("Confirm RoHS/REACH compliance documents when compliance matters.");
+  }
+  return Array.from(checklist).slice(0, 8);
 }
 
 function positiveStockText(stockText: string | undefined): boolean {

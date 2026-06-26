@@ -237,11 +237,12 @@ function scoreCandidate(candidate: PartCandidate, input: SearchPartsInput): Matc
   );
   const queryTokens = primaryQueryTokensForScoring(input);
   const expandedQueryTokens = expandedQueryTokensForScoring(input, queryTokens);
-  const exactish = extractExactishPartNumber(input.query);
+  const exactTargets = exactPartNumberTargets(input.query);
+  const exactMatch = exactTargets.find((target) => isLikelyExactPart(candidate, target));
 
-  if (exactish && isLikelyExactPart(candidate, exactish)) {
+  if (exactMatch) {
     score += 35;
-    matched.push(`exact part number: ${exactish}`);
+    matched.push(`exact part number: ${exactMatch}`);
     reasons.push("Exact manufacturer or supplier part number matched.");
   }
 
@@ -757,6 +758,10 @@ function extractExactishPartNumber(value: string): string | undefined {
     .map((candidate) => candidate.trim())
     .filter((candidate) => /[0-9]/.test(candidate) && /[A-Z]/i.test(candidate) && !isUnitLikeToken(candidate))
     .sort((a, b) => b.length - a.length)[0];
+}
+
+function exactPartNumberTargets(value: string): string[] {
+  return unique([extractJoinedPartNumberCandidate(value), extractExactishPartNumber(value)].filter((target): target is string => Boolean(target)));
 }
 
 function extractJoinedPartNumberCandidate(value: string): string | undefined {

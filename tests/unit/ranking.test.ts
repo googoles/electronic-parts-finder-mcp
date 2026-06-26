@@ -210,6 +210,28 @@ describe("search ranking", () => {
     expect(plan.notes.join(" ")).toContain("joined part-number query");
   });
 
+  it("boosts joined OCR-like part number matches during ranking", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "STM32C552RET6",
+          description: "Arm Cortex MCU CAN FD microcontroller"
+        }),
+        candidate({
+          manufacturerPartNumber: "STM32F103RET6",
+          description: "STM32 C552 compatible family microcontroller"
+        })
+      ],
+      {
+        query: "STM32 C552 RET6",
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("STM32C552RET6");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("exact part number: STM32C552RET6");
+  });
+
   it("keeps joined OCR part numbers inside the bounded query set when visual hints are present", () => {
     const plan = buildSearchPlan({
       query: "STM32 C552 RET6",

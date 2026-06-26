@@ -56,6 +56,21 @@ function formatMm(value: number): string {
   return `${Number(value.toFixed(3))}mm`;
 }
 
+function dimensionTerms(dimensions: { length?: number; width?: number; height?: number } | undefined): string[] {
+  if (!dimensions) {
+    return [];
+  }
+  const compact = [dimensions.length, dimensions.width, dimensions.height]
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0)
+    .map((value) => formatMm(value));
+  return [
+    compact.length >= 2 ? compact.join(" x ") : undefined,
+    dimensions.length ? `${formatMm(dimensions.length)} length` : undefined,
+    dimensions.width ? `${formatMm(dimensions.width)} width` : undefined,
+    dimensions.height ? `${formatMm(dimensions.height)} height` : undefined
+  ].filter((term): term is string => Boolean(term));
+}
+
 type SupplierSearchResult = {
   candidates: PartCandidate[];
   rawCount: number;
@@ -251,6 +266,7 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
         input.connectorMountingStyle,
         input.connectorFamily,
         input.cableWireCount ? `${input.cableWireCount} wire cable` : undefined,
+        ...dimensionTerms(input.dimensionsMm),
         input.motorHints?.hasEncoder ? "encoder motor" : undefined,
         input.motorHints?.gearhead ? "gear motor" : undefined,
         input.motorHints?.shaftDiameterMm ? `${formatMm(input.motorHints.shaftDiameterMm)} shaft` : undefined,

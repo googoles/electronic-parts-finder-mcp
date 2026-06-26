@@ -320,6 +320,57 @@ describe("search ranking", () => {
     expect(ranked[0]?.match.matched.join(" ")).toContain("6mm shaft");
     expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("motor shaft diameter");
   });
+
+  it("builds search variants from general package dimensions", () => {
+    const plan = buildSearchPlan({
+      query: "small sensor module",
+      visualHints: {
+        packageShape: "rectangular module",
+        dimensionsMm: {
+          length: 45,
+          width: 18,
+          height: 12
+        }
+      },
+      limit: 10
+    });
+
+    const text = plan.queries.join(" ");
+    expect(text).toContain("45mm x 18mm x 12mm");
+    expect(text).toContain("45mm length");
+    expect(text).toContain("18mm width");
+  });
+
+  it("uses general package dimensions as ranking evidence", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "DIM-RIGHT",
+          description: "rectangular sensor module 45mm x 18mm x 12mm 45mm length 18mm width 12mm height"
+        }),
+        candidate({
+          manufacturerPartNumber: "DIM-WRONG",
+          description: "rectangular sensor module 60mm x 30mm x 20mm"
+        })
+      ],
+      {
+        query: "small sensor module",
+        visualHints: {
+          packageShape: "rectangular module",
+          dimensionsMm: {
+            length: 45,
+            width: 18,
+            height: 12
+          }
+        },
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("DIM-RIGHT");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("45mm x 18mm x 12mm");
+    expect(ranked[0]?.match.verificationChecklist?.join(" ")).toContain("overall length");
+  });
 });
 
 function candidate(overrides: Partial<PartCandidate>): PartCandidate {

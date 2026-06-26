@@ -6,6 +6,7 @@ import { withInferredVisualHints } from "./query-intent.js";
 import { normalizeSearchQueryForSuppliers, normalizedQueryVariants } from "./query-normalization.js";
 
 type SearchPartsInput = z.infer<typeof SearchPartsInputSchema>;
+type VisualHints = NonNullable<SearchPartsInput["visualHints"]>;
 
 export type RankedCandidate = PartCandidate;
 
@@ -450,6 +451,7 @@ function visualHintTerms(input: Pick<SearchPartsInput, "visualHints" | "category
       hints.connectorGender,
       hints.connectorMountingStyle,
       hints.connectorFamily,
+      ...dimensionTerms(hints.dimensionsMm),
       hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
       hints.motorHints?.gearhead ? "gear motor" : undefined,
@@ -482,6 +484,7 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
       hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
       hints.connectorMountingStyle,
       hints.connectorGender,
+      compactDimensionTerm(hints.dimensionsMm),
       hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
       hints.motorHints?.hasEncoder ? "encoder" : undefined,
       hints.motorHints?.gearhead ? "gear motor" : undefined,
@@ -500,7 +503,8 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
     hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
     hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
     hints.connectorMountingStyle,
-    hints.connectorGender
+    hints.connectorGender,
+    compactDimensionTerm(hints.dimensionsMm)
   ];
   const primary = cleanWhitespace([input.query, ...baseTerms].filter(Boolean).join(" "));
 
@@ -538,7 +542,8 @@ function relaxedVisualQueryVariants(input: SearchPartsInput): string[] {
     [
       genericFamily,
       hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
-      hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined
+      hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
+      compactDimensionTerm(hints.dimensionsMm)
     ],
     [genericFamily, hints.connectorPinCount ? `${hints.connectorPinCount} pin` : undefined],
     [
@@ -584,6 +589,28 @@ function compactConnectorLayout(rowCount: number | undefined, pinCount: number |
     return undefined;
   }
   return `${rowCount}x${pinCount / rowCount}`;
+}
+
+function dimensionTerms(dimensions: VisualHints["dimensionsMm"]): string[] {
+  if (!dimensions) {
+    return [];
+  }
+  return [
+    compactDimensionTerm(dimensions),
+    dimensions.length ? `${formatMm(dimensions.length)} length` : undefined,
+    dimensions.width ? `${formatMm(dimensions.width)} width` : undefined,
+    dimensions.height ? `${formatMm(dimensions.height)} height` : undefined
+  ].filter((term): term is string => Boolean(term));
+}
+
+function compactDimensionTerm(dimensions: VisualHints["dimensionsMm"]): string | undefined {
+  if (!dimensions) {
+    return undefined;
+  }
+  const values = [dimensions.length, dimensions.width, dimensions.height]
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0)
+    .map((value) => formatMm(value));
+  return values.length >= 2 ? values.join(" x ") : undefined;
 }
 
 function scoreVisualFeatureMatches(candidate: PartCandidate, input: SearchPartsInput): {
@@ -735,6 +762,9 @@ function buildVerificationChecklist(
   }
   if (input.constraints?.mustHave?.length || input.constraints?.mustNotHave?.length) {
     checklist.add("Verify all must-have and forbidden terms against official specifications.");
+  }
+  if (hints?.dimensionsMm?.length || hints?.dimensionsMm?.width || hints?.dimensionsMm?.height) {
+    checklist.add("Verify overall length, width, height, clearance, mounting holes, and orientation against the measured part.");
   }
   if (
     hints?.motorHints?.shaftDiameterMm ||

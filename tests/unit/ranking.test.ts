@@ -206,7 +206,25 @@ describe("search ranking", () => {
     });
 
     expect(plan.queries).toContain("STM32C552RET6");
+    expect(plan.queries.indexOf("STM32C552RET6")).toBeLessThanOrEqual(1);
     expect(plan.notes.join(" ")).toContain("joined part-number query");
+  });
+
+  it("keeps joined OCR part numbers inside the bounded query set when visual hints are present", () => {
+    const plan = buildSearchPlan({
+      query: "STM32 C552 RET6",
+      visualHints: {
+        connectorPinCount: 20,
+        connectorRowCount: 2,
+        connectorPitchMm: 2.54,
+        connectorFamily: "IDC box header"
+      },
+      limit: 10
+    });
+
+    expect(plan.queries.length).toBeLessThanOrEqual(4);
+    expect(plan.queries).toContain("STM32C552RET6");
+    expect(plan.queries.indexOf("STM32C552RET6")).toBeLessThan(plan.queries.length);
   });
 
   it("builds compact connector query variants from row count and pitch", () => {

@@ -238,7 +238,7 @@ function scoreCandidate(candidate: PartCandidate, input: SearchPartsInput): Matc
   );
   const queryTokens = primaryQueryTokensForScoring(input);
   const expandedQueryTokens = expandedQueryTokensForScoring(input, queryTokens);
-  const exactTargets = exactPartNumberTargets(input.query);
+  const exactTargets = exactPartNumberTargetsForInput(input);
   const exactMatch = exactTargets.find((target) => isLikelyExactPart(candidate, target));
 
   if (exactMatch) {
@@ -832,6 +832,14 @@ function extractExactishPartNumber(value: string): string | undefined {
 
 function exactPartNumberTargets(value: string): string[] {
   return unique([extractJoinedPartNumberCandidate(value), extractExactishPartNumber(value)].filter((target): target is string => Boolean(target)));
+}
+
+function exactPartNumberTargetsForInput(input: SearchPartsInput): string[] {
+  const visibleText = input.visualHints?.visibleText?.join(" ");
+  return unique([
+    ...exactPartNumberTargets(input.query),
+    ...(visibleText ? exactPartNumberTargets(visibleText) : [])
+  ]);
 }
 
 function extractJoinedPartNumberCandidate(value: string): string | undefined {

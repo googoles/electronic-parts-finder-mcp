@@ -410,7 +410,7 @@ describe("search ranking", () => {
     );
 
     expect(ranked[0]?.manufacturerPartNumber).toBe("STM32C552RET6");
-    expect(ranked[0]?.match.matched.join(" ")).toContain("STM32C552RET6");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("exact part number: STM32C552RET6");
   });
 });
 

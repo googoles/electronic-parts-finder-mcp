@@ -39,6 +39,20 @@ const phraseReplacements: Array<[RegExp, string]> = [
   [/솔레노이드\s*밸브/gi, "solenoid valve"],
   [/전원\s*모듈/gi, "power module"],
   [/전원\s*공급|파워\s*서플라이|SMPS/gi, "power supply"],
+  [/전압\s*레귤레이터|전압\s*조정기/gi, "voltage regulator"],
+  [/DC\s*DC|DC-DC|디씨\s*디씨/gi, "DC DC converter"],
+  [/리니어\s*레귤레이터|LDO/gi, "LDO regulator"],
+  [/저항\s*어레이|저항\s*네트워크/gi, "resistor array"],
+  [/칩\s*저항|SMD\s*저항/gi, "chip resistor"],
+  [/칩\s*커패시터|칩\s*콘덴서|SMD\s*커패시터|SMD\s*콘덴서/gi, "MLCC capacitor"],
+  [/전해\s*커패시터|전해\s*콘덴서/gi, "aluminum electrolytic capacitor"],
+  [/세라믹\s*커패시터|세라믹\s*콘덴서/gi, "ceramic capacitor"],
+  [/쇼트키\s*다이오드/gi, "Schottky diode"],
+  [/제너\s*다이오드|정전압\s*다이오드/gi, "Zener diode"],
+  [/브리지\s*다이오드/gi, "bridge rectifier"],
+  [/로직\s*레벨\s*MOSFET/gi, "logic level MOSFET"],
+  [/포토\s*커플러|옵토\s*커플러/gi, "optocoupler"],
+  [/크리스탈\s*오실레이터|수정\s*발진기/gi, "crystal oscillator"],
   [/개발\s*보드/gi, "development board"],
   [/릴레이\s*모듈/gi, "relay module"],
   [/PLC\s*입출력|PLC\s*I\/O|I\/O\s*모듈|입출력\s*모듈/gi, "PLC I/O module"],
@@ -61,6 +75,17 @@ const tokenReplacements: Array<[RegExp, string]> = [
   [/스위치/gi, "switch"],
   [/릴레이/gi, "relay"],
   [/엔코더/gi, "encoder"],
+  [/저항/gi, "resistor"],
+  [/커패시터|콘덴서/gi, "capacitor"],
+  [/인덕터|코일/gi, "inductor"],
+  [/다이오드/gi, "diode"],
+  [/트랜지스터/gi, "transistor"],
+  [/레귤레이터/gi, "regulator"],
+  [/정류기/gi, "rectifier"],
+  [/퓨즈/gi, "fuse"],
+  [/배리스터/gi, "varistor"],
+  [/써미스터|서미스터/gi, "thermistor"],
+  [/비드/gi, "ferrite bead"],
   [/어댑터/gi, "adapter"],
   [/소켓/gi, "socket"],
   [/헤더/gi, "header"],
@@ -100,6 +125,16 @@ const addedTermRules: Array<[RegExp, string[]]> = [
   [/\bterminal block\b/i, ["industrial terminal block"]],
   [/\bPLC I\/O module\b|\bdigital input module\b|\bdigital output module\b|\banalog input module\b|\banalog output module\b/i, ["industrial automation module"]],
   [/\bvariable frequency drive\b/i, ["VFD inverter"]],
+  [/\bMLCC\b|\bceramic capacitor\b/i, ["multilayer ceramic capacitor"]],
+  [/\baluminum electrolytic capacitor\b/i, ["electrolytic capacitor"]],
+  [/\bSchottky diode\b/i, ["switching diode"]],
+  [/\bZener diode\b/i, ["voltage reference diode"]],
+  [/\bLDO regulator\b/i, ["linear regulator"]],
+  [/\bDC DC converter\b/i, ["switching regulator"]],
+  [/\b0603\b/i, ["1608 metric"]],
+  [/\b0402\b/i, ["1005 metric"]],
+  [/\b0805\b/i, ["2012 metric"]],
+  [/\b1206\b/i, ["3216 metric"]],
   [/\b2\.54\s*mm\b|\b0\.100\b/i, ["0.100 inch pitch"]],
   [/\b1\.27\s*mm\b|\b0\.050\b/i, ["0.050 inch pitch"]],
   [/\b2\.00\s*mm\b/i, ["2.00mm pitch"]],
@@ -157,7 +192,16 @@ function normalizeKoreanCounts(value: string): string {
     .replace(/(\d+)\s*가닥/gi, "$1 wire")
     .replace(/(\d+)\s*선/gi, "$1 wire")
     .replace(/(\d+(?:\.\d+)?)\s*미리/gi, "$1mm")
-    .replace(/(\d+(?:\.\d+)?)\s*밀리/gi, "$1mm");
+    .replace(/(\d+(?:\.\d+)?)\s*밀리/gi, "$1mm")
+    .replace(/(\d+(?:\.\d+)?)\s*옴/gi, "$1 ohm")
+    .replace(/(\d+(?:\.\d+)?)\s*키로\s*옴/gi, "$1 kOhm")
+    .replace(/(\d+(?:\.\d+)?)\s*킬로\s*옴/gi, "$1 kOhm")
+    .replace(/(\d+(?:\.\d+)?)\s*메가\s*옴/gi, "$1 MOhm")
+    .replace(/(\d+(?:\.\d+)?)\s*마이크로\s*패럿/gi, "$1uF")
+    .replace(/(\d+(?:\.\d+)?)\s*나노\s*패럿/gi, "$1nF")
+    .replace(/(\d+(?:\.\d+)?)\s*피코\s*패럿/gi, "$1pF")
+    .replace(/(\d+)\s*\/\s*(\d+)\s*와트/gi, "$1/$2W")
+    .replace(/(\d+(?:\.\d+)?)\s*와트/gi, "$1W");
 }
 
 function normalizeSpacing(value: string): string {

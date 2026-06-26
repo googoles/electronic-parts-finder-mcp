@@ -87,4 +87,26 @@ describe("query normalization", () => {
     expect(fallback.queries.some((query) => primary.queries.includes(query))).toBe(false);
     expect(fallback.notes.join(" ")).toContain("fallback relaxed queries");
   });
+
+  it("normalizes passive component field language and values", () => {
+    const normalized = normalizeSearchQueryForSuppliers("10 키로 옴 칩 저항 0603 1/4와트");
+
+    expect(normalized.normalizedQuery).toContain("10 kOhm");
+    expect(normalized.normalizedQuery).toContain("chip resistor");
+    expect(normalized.normalizedQuery).toContain("0603");
+    expect(normalized.normalizedQuery).toContain("1/4W");
+    expect(normalized.addedTerms).toContain("1608 metric");
+  });
+
+  it("normalizes capacitor and regulator field language", () => {
+    const normalized = normalizeSearchQueryForSuppliers("100 나노 패럿 세라믹 콘덴서 0805 LDO 전압 레귤레이터");
+
+    expect(normalized.normalizedQuery).toContain("100nF");
+    expect(normalized.normalizedQuery).toContain("ceramic capacitor");
+    expect(normalized.normalizedQuery).toContain("0805");
+    expect(normalized.normalizedQuery).toContain("LDO regulator");
+    expect(normalized.addedTerms).toContain("multilayer ceramic capacitor");
+    expect(normalized.addedTerms).toContain("linear regulator");
+    expect(normalized.addedTerms).toContain("2012 metric");
+  });
 });

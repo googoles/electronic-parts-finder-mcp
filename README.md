@@ -103,6 +103,7 @@ The MCP now improves rough searches before returning results:
 
 - builds up to four bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
 - normalizes common Korean/field terms such as `2핀`, `커넥터`, `패널마운트`, `방수`, `기어모터`, `엔코더`, `단자대`, `푸시인`, and `PLC 입출력 모듈` into supplier-friendly English search terms
+- normalizes common passive, power, and semiconductor field terms such as `저항`, `콘덴서`, `인덕터`, `LDO`, `DC-DC`, `MOSFET`, `다이오드`, `10 키로 옴`, `100 나노 패럿`, and package sizes like `0603`
 - prioritizes supplier-friendly normalized queries when field-language input was translated, while still preserving the original query for traceability
 - adds compact supplier queries from inferred visual hints, such as connector family, pin count, pitch, gender, and mounting style
 - runs up to two relaxed fallback queries only when the initial ranked result set is empty, limiting extra API calls while improving recovery from over-specific searches

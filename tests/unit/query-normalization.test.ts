@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeSearchQueryForSuppliers, normalizedQueryVariants } from "../../src/search/query-normalization.js";
-import { buildSearchPlan } from "../../src/search/ranking.js";
+import { buildFallbackSearchPlan, buildSearchPlan } from "../../src/search/ranking.js";
 
 describe("query normalization", () => {
   it("translates Korean connector field terms into supplier-friendly English", () => {
@@ -71,5 +71,20 @@ describe("query normalization", () => {
     expect(plan.queries).toContain("M12 circular connector 4 position panel mount female");
     expect(plan.queries).toContain("M12 4핀 암형 패널형 방수 항공 커넥터");
     expect(plan.notes.join(" ")).toContain("visual connector query variants");
+  });
+
+  it("builds relaxed fallback queries after empty ranked results", () => {
+    const input = {
+      query: "M12 4핀 암형 패널형 방수 항공 커넥터",
+      limit: 10
+    };
+    const primary = buildSearchPlan(input);
+    const fallback = buildFallbackSearchPlan(input, primary.queries);
+
+    expect(fallback.queries.length).toBeGreaterThan(0);
+    expect(fallback.queries.length).toBeLessThanOrEqual(2);
+    expect(fallback.queries).toContain("M12 circular connector 4 position");
+    expect(fallback.queries.some((query) => primary.queries.includes(query))).toBe(false);
+    expect(fallback.notes.join(" ")).toContain("fallback relaxed queries");
   });
 });

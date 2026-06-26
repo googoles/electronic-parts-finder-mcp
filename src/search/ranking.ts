@@ -38,6 +38,18 @@ const stopWords = new Set([
   "with"
 ]);
 
+const lowValueFallbackTokens = new Set([
+  "black",
+  "blue",
+  "gray",
+  "green",
+  "red",
+  "white",
+  "yellow",
+  "mount",
+  "type"
+]);
+
 export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
   const plannedInput = withInferredVisualHints(input);
   const notes: string[] = [];
@@ -95,6 +107,33 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
 
   return {
     queries: queries.slice(0, 4),
+    notes
+  };
+}
+
+export function buildFallbackSearchPlan(input: SearchPartsInput, previousQueries: string[] = []): SearchPlan {
+  const plannedInput = withInferredVisualHints(input);
+  const previous = new Set(previousQueries.map((query) => cleanWhitespace(query).toLowerCase()));
+  const notes: string[] = [];
+  const queries: string[] = [];
+  const addQuery = (query: string | undefined) => {
+    const cleaned = cleanWhitespace(query ?? "");
+    if (cleaned && !previous.has(cleaned.toLowerCase()) && !queries.includes(cleaned)) {
+      queries.push(cleaned);
+    }
+  };
+
+  for (const query of relaxedVisualQueryVariants(plannedInput)) {
+    addQuery(query);
+  }
+  addQuery(compactKeywordQuery(plannedInput));
+
+  if (queries.length > 0) {
+    notes.push(`Added fallback relaxed queries after no ranked candidates: ${queries.join(" | ")}`);
+  }
+
+  return {
+    queries: queries.slice(0, 2),
     notes
   };
 }
@@ -470,6 +509,40 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
   }
 
   return unique(variants.filter((query) => query !== cleanWhitespace(input.query)));
+}
+
+function relaxedVisualQueryVariants(input: SearchPartsInput): string[] {
+  const hints = input.visualHints;
+  if (!hints) {
+    return [];
+  }
+
+  const familyOrShape = hints.connectorFamily ?? hints.packageShape ?? input.categoryHint;
+  const genericFamily = familyOrShape ?? (hints.connectorPinCount || hints.connectorPitchMm ? "connector" : undefined);
+  const variants = [
+    [
+      genericFamily,
+      hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
+      hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined
+    ],
+    [genericFamily, hints.connectorPinCount ? `${hints.connectorPinCount} pin` : undefined],
+    [
+      hints.motorHints?.hasEncoder ? "encoder" : undefined,
+      hints.motorHints?.gearhead ? "gear motor" : undefined,
+      hints.motorHints?.connectorType
+    ],
+    [hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined, genericFamily]
+  ].map((parts) => cleanWhitespace(parts.filter(Boolean).join(" ")));
+
+  return unique(variants.filter(Boolean));
+}
+
+function compactKeywordQuery(input: SearchPartsInput): string | undefined {
+  const normalized = normalizeSearchQueryForSuppliers(input.query);
+  const tokens = tokenize([normalized.normalizedQuery, ...normalized.addedTerms, input.categoryHint].filter(Boolean).join(" "))
+    .filter((token) => !lowValueFallbackTokens.has(token))
+    .slice(0, 6);
+  return tokens.length >= 2 ? tokens.join(" ") : undefined;
 }
 
 function primaryQueryTokensForScoring(input: SearchPartsInput): string[] {

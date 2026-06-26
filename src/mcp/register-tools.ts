@@ -5,6 +5,7 @@ import type { PartsFinderConfig } from "../config/env.js";
 import { normalizeSearchQueryForSuppliers } from "../search/query-normalization.js";
 import {
   bestUnitPrice,
+  buildFallbackSearchPlan,
   buildSearchPlan,
   compareCandidates,
   isLikelyExactPart,
@@ -88,61 +89,75 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
       );
     }
 
-    for (const query of searchPlan.queries) {
-      if (allowed.has("mouser") && config.suppliers.mouser.enabled) {
-        try {
-          const mouserResult = await cachedSupplierSearch("mouser", query, input, () =>
-            mouserClient.searchKeyword({
-              query,
-              limit: input.limit,
-              inStockOnly: input.constraints?.inStockOnly
-            })
-          );
-          candidates.push(...mouserResult.candidates);
-          rawCount += mouserResult.rawCount;
-          warnings.push(...mouserResult.warnings);
-        } catch (error) {
-          warnings.push(error instanceof Error ? error.message : "Mouser Search API failed.");
+    const runSupplierQueries = async (queries: string[]) => {
+      for (const query of queries) {
+        if (allowed.has("mouser") && config.suppliers.mouser.enabled) {
+          try {
+            const mouserResult = await cachedSupplierSearch("mouser", query, input, () =>
+              mouserClient.searchKeyword({
+                query,
+                limit: input.limit,
+                inStockOnly: input.constraints?.inStockOnly
+              })
+            );
+            candidates.push(...mouserResult.candidates);
+            rawCount += mouserResult.rawCount;
+            warnings.push(...mouserResult.warnings);
+          } catch (error) {
+            warnings.push(error instanceof Error ? error.message : "Mouser Search API failed.");
+          }
+        }
+
+        if (allowed.has("digikey") && config.suppliers.digikey.enabled) {
+          try {
+            const digikeyResult = await cachedSupplierSearch("digikey", query, input, () =>
+              digikeyClient.searchKeyword({
+                query,
+                limit: input.limit,
+                inStockOnly: input.constraints?.inStockOnly
+              })
+            );
+            candidates.push(...digikeyResult.candidates);
+            rawCount += digikeyResult.rawCount;
+            warnings.push(...digikeyResult.warnings);
+          } catch (error) {
+            warnings.push(error instanceof Error ? error.message : "DigiKey ProductInformation V4 failed.");
+          }
+        }
+
+        if (shouldSearchAliExpress && config.suppliers.aliexpress.enabled) {
+          try {
+            const aliexpressResult = await cachedSupplierSearch("aliexpress", query, input, () =>
+              aliexpressClient.searchKeyword({
+                query,
+                limit: input.limit,
+                marketplaceAllowed: true
+              })
+            );
+            candidates.push(...aliexpressResult.candidates);
+            rawCount += aliexpressResult.rawCount;
+            warnings.push(...aliexpressResult.warnings);
+          } catch (error) {
+            warnings.push(error instanceof Error ? error.message : "AliExpress Open Platform search failed.");
+          }
         }
       }
+    };
 
-      if (allowed.has("digikey") && config.suppliers.digikey.enabled) {
-        try {
-          const digikeyResult = await cachedSupplierSearch("digikey", query, input, () =>
-            digikeyClient.searchKeyword({
-              query,
-              limit: input.limit,
-              inStockOnly: input.constraints?.inStockOnly
-            })
-          );
-          candidates.push(...digikeyResult.candidates);
-          rawCount += digikeyResult.rawCount;
-          warnings.push(...digikeyResult.warnings);
-        } catch (error) {
-          warnings.push(error instanceof Error ? error.message : "DigiKey ProductInformation V4 failed.");
-        }
-      }
-
-      if (shouldSearchAliExpress && config.suppliers.aliexpress.enabled) {
-        try {
-          const aliexpressResult = await cachedSupplierSearch("aliexpress", query, input, () =>
-            aliexpressClient.searchKeyword({
-              query,
-              limit: input.limit,
-              marketplaceAllowed: true
-            })
-          );
-          candidates.push(...aliexpressResult.candidates);
-          rawCount += aliexpressResult.rawCount;
-          warnings.push(...aliexpressResult.warnings);
-        } catch (error) {
-          warnings.push(error instanceof Error ? error.message : "AliExpress Open Platform search failed.");
-        }
+    await runSupplierQueries(searchPlan.queries);
+    let rankedCandidates = rankAndFilterCandidates(candidates, input);
+    if (rankedCandidates.length === 0) {
+      const fallbackPlan = buildFallbackSearchPlan(input, searchPlan.queries);
+      if (fallbackPlan.queries.length > 0) {
+        searchPlan.queries.push(...fallbackPlan.queries);
+        searchPlan.notes.push(...fallbackPlan.notes);
+        await runSupplierQueries(fallbackPlan.queries);
+        rankedCandidates = rankAndFilterCandidates(candidates, input);
       }
     }
 
     return {
-      candidates: rankAndFilterCandidates(candidates, input),
+      candidates: rankedCandidates,
       rawCount,
       warnings,
       searchPlan,

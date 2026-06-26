@@ -105,6 +105,7 @@ The MCP now improves rough searches before returning results:
 - normalizes common Korean/field terms such as `2핀`, `커넥터`, `패널마운트`, `방수`, `기어모터`, `엔코더`, `단자대`, `푸시인`, and `PLC 입출력 모듈` into supplier-friendly English search terms
 - prioritizes supplier-friendly normalized queries when field-language input was translated, while still preserving the original query for traceability
 - adds compact supplier queries from inferred visual hints, such as connector family, pin count, pitch, gender, and mounting style
+- runs up to two relaxed fallback queries only when the initial ranked result set is empty, limiting extra API calls while improving recovery from over-specific searches
 - scores candidates against those normalized terms too, so field-language searches can match English supplier descriptions more reliably
 - infers pin count, row count, pitch, connector family, mounting style, color, wire count, and motor encoder/gearhead hints from rough query text
 - returns per-candidate `confidence`, `fitSummary`, and `verificationChecklist` fields to make sourcing decisions easier to audit

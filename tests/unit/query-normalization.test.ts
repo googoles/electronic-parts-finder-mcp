@@ -24,13 +24,15 @@ describe("query normalization", () => {
     expect(variants.join(" ")).toContain("M12 circular connector");
   });
 
-  it("adds normalized Korean variants to the search plan without dropping the original query", () => {
+  it("prioritizes normalized Korean variants without dropping the original query", () => {
     const plan = buildSearchPlan({
       query: "엔코더 달린 DC 기어모터",
       limit: 10
     });
 
-    expect(plan.queries[0]).toBe("엔코더 달린 DC 기어모터");
+    expect(plan.queries[0]).toContain("encoder");
+    expect(plan.queries[0]).toContain("gear motor");
+    expect(plan.queries).toContain("엔코더 달린 DC 기어모터");
     expect(plan.queries.some((query) => query.includes("encoder"))).toBe(true);
     expect(plan.queries.some((query) => query.includes("gear motor"))).toBe(true);
     expect(plan.notes.join(" ")).toContain("supplier-friendly normalized query");

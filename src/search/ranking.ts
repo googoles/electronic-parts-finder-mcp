@@ -41,12 +41,28 @@ const stopWords = new Set([
 export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
   const plannedInput = withInferredVisualHints(input);
   const notes: string[] = [];
-  const queries = new Set<string>();
-  queries.add(cleanWhitespace(plannedInput.query));
+  const queries: string[] = [];
+  const originalQuery = cleanWhitespace(plannedInput.query);
+  const normalized = normalizeSearchQueryForSuppliers(plannedInput.query);
+  const addQuery = (query: string | undefined) => {
+    const cleaned = cleanWhitespace(query ?? "");
+    if (cleaned && !queries.includes(cleaned)) {
+      queries.push(cleaned);
+    }
+  };
 
   const normalizedQueries = normalizedQueryVariants(plannedInput.query);
-  for (const query of normalizedQueries) {
-    queries.add(query);
+  const normalizedChanged = cleanWhitespace(normalized.normalizedQuery) !== originalQuery;
+  if (normalizedChanged) {
+    for (const query of normalizedQueries) {
+      addQuery(query);
+    }
+    addQuery(originalQuery);
+  } else {
+    addQuery(originalQuery);
+    for (const query of normalizedQueries) {
+      addQuery(query);
+    }
   }
   if (normalizedQueries.length > 0) {
     notes.push(`Added supplier-friendly normalized query variants: ${normalizedQueries.join(" | ")}`);
@@ -54,7 +70,7 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
 
   const visualQueries = visualQueryVariants(plannedInput);
   for (const query of visualQueries) {
-    queries.add(query);
+    addQuery(query);
   }
   if (visualQueries.length > 0) {
     notes.push(`Added visual connector query variants: ${visualQueries.join(" | ")}`);
@@ -62,23 +78,23 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
 
   const hintTerms = visualHintTerms(plannedInput);
   if (hintTerms.length > 0) {
-    queries.add(cleanWhitespace([plannedInput.query, ...hintTerms.slice(0, 4)].join(" ")));
+    addQuery([plannedInput.query, ...hintTerms.slice(0, 4)].join(" "));
     notes.push(`Expanded query with visual hints: ${hintTerms.slice(0, 4).join(", ")}`);
   }
 
   if (plannedInput.categoryHint) {
-    queries.add(cleanWhitespace([plannedInput.query, plannedInput.categoryHint].join(" ")));
+    addQuery([plannedInput.query, plannedInput.categoryHint].join(" "));
     notes.push(`Expanded query with category hint: ${plannedInput.categoryHint}`);
   }
 
   const exactish = extractExactishPartNumber(plannedInput.query);
   if (exactish && exactish !== plannedInput.query) {
-    queries.add(exactish);
+    addQuery(exactish);
     notes.push(`Added exact-looking part number query: ${exactish}`);
   }
 
   return {
-    queries: Array.from(queries).filter(Boolean).slice(0, 4),
+    queries: queries.slice(0, 4),
     notes
   };
 }

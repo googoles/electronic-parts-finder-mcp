@@ -151,6 +151,9 @@ describe("search ranking", () => {
     );
 
     expect(ranked[0]?.manufacturerPartNumber).toBe("M12-RIGHT");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("query terms:");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("waterproof");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("circular");
     expect(ranked[0]?.match.matched.join(" ")).toContain("pin/position count: 4");
     expect(ranked[0]?.match.matched.join(" ")).toContain("mounting style: panel mount");
     expect(ranked[0]?.match.matched.join(" ")).toContain("connector gender/type: female");

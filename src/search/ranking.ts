@@ -3,7 +3,7 @@ import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { SearchPartsInputSchema } from "../mcp/schemas.js";
 import { extractPartFeatures, pitchMatches } from "./part-features.js";
 import { withInferredVisualHints } from "./query-intent.js";
-import { normalizedQueryVariants } from "./query-normalization.js";
+import { normalizeSearchQueryForSuppliers, normalizedQueryVariants } from "./query-normalization.js";
 
 type SearchPartsInput = z.infer<typeof SearchPartsInputSchema>;
 
@@ -174,7 +174,8 @@ function scoreCandidate(candidate: PartCandidate, input: SearchPartsInput): Matc
       Object.values(candidate.specs).join(" ")
     ].join(" ")
   );
-  const queryTokens = tokenize(input.query);
+  const queryTokens = primaryQueryTokensForScoring(input);
+  const expandedQueryTokens = expandedQueryTokensForScoring(input, queryTokens);
   const exactish = extractExactishPartNumber(input.query);
 
   if (exactish && isLikelyExactPart(candidate, exactish)) {
@@ -194,6 +195,12 @@ function scoreCandidate(candidate: PartCandidate, input: SearchPartsInput): Matc
     if (importantMissing.length > 0) {
       missing.push(`query terms: ${importantMissing.slice(0, 5).join(", ")}`);
     }
+  }
+
+  const expandedTokenMatches = expandedQueryTokens.filter((token) => haystack.includes(token));
+  if (expandedTokenMatches.length > 0) {
+    score += Math.min(10, expandedTokenMatches.length * 2);
+    matched.push(`expanded query terms: ${expandedTokenMatches.slice(0, 6).join(", ")}`);
   }
 
   const constraints = input.constraints;
@@ -430,6 +437,22 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
   }
 
   return unique(variants.filter((query) => query !== cleanWhitespace(input.query)));
+}
+
+function primaryQueryTokensForScoring(input: SearchPartsInput): string[] {
+  const normalized = normalizeSearchQueryForSuppliers(input.query);
+  return tokenize(normalized.normalizedQuery || input.query);
+}
+
+function expandedQueryTokensForScoring(input: SearchPartsInput, primaryTokens: string[]): string[] {
+  const normalized = normalizeSearchQueryForSuppliers(input.query);
+  return unique(
+    [
+      ...normalized.addedTerms.flatMap((term) => tokenize(term)),
+      ...visualHintTerms(input).flatMap((term) => tokenize(term)),
+      ...tokenize(input.categoryHint ?? "")
+    ].filter((token) => token.length >= 2)
+  ).filter((token) => !primaryTokens.includes(token));
 }
 
 function compactConnectorLayout(rowCount: number | undefined, pinCount: number | undefined): string | undefined {

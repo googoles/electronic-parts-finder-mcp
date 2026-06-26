@@ -60,4 +60,16 @@ describe("query normalization", () => {
     expect(text).toContain("waterproof");
     expect(text).toContain("circular connector");
   });
+
+  it("adds compact supplier queries from inferred visual hints", () => {
+    const plan = buildSearchPlan({
+      query: "M12 4핀 암형 패널형 방수 항공 커넥터",
+      limit: 10
+    });
+
+    expect(plan.queries.length).toBeLessThanOrEqual(4);
+    expect(plan.queries).toContain("M12 circular connector 4 position panel mount female");
+    expect(plan.queries).toContain("M12 4핀 암형 패널형 방수 항공 커넥터");
+    expect(plan.notes.join(" ")).toContain("visual connector query variants");
+  });
 });

@@ -423,9 +423,26 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
 
   const layout = compactConnectorLayout(hints.connectorRowCount, hints.connectorPinCount);
   const familyOrShape = hints.connectorFamily ?? hints.packageShape ?? input.categoryHint;
+  const compact = cleanWhitespace(
+    [
+      layout,
+      familyOrShape,
+      !familyOrShape && hints.connectorPinCount ? "connector" : undefined,
+      hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
+      hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
+      hints.connectorMountingStyle,
+      hints.connectorGender,
+      hints.cableWireCount ? `${hints.cableWireCount} wire` : undefined,
+      hints.motorHints?.hasEncoder ? "encoder" : undefined,
+      hints.motorHints?.gearhead ? "gear motor" : undefined
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
   const baseTerms = [
     layout,
     familyOrShape,
+    hints.connectorPinCount ? `${hints.connectorPinCount} pin` : undefined,
     hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
     hints.connectorPitchMm ? `${hints.connectorPitchMm}mm pitch` : undefined,
     hints.connectorMountingStyle,
@@ -433,14 +450,14 @@ function visualQueryVariants(input: SearchPartsInput): string[] {
   ];
   const primary = cleanWhitespace([input.query, ...baseTerms].filter(Boolean).join(" "));
 
-  const variants = [primary];
+  const variants = [compact, primary];
   if (hints.connectorPitchMm && pitchMatches(hints.connectorPitchMm, 2.54)) {
     variants.push(
       cleanWhitespace(
         [
-          input.query,
           layout,
           familyOrShape,
+          !familyOrShape && hints.connectorPinCount ? "connector" : undefined,
           hints.connectorPinCount ? `${hints.connectorPinCount} position` : undefined,
           "0.100 inch pitch",
           hints.connectorMountingStyle,

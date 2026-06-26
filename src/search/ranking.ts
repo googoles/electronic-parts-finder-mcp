@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { SearchPartsInputSchema } from "../mcp/schemas.js";
 import { extractPartFeatures, pitchMatches } from "./part-features.js";
+import { withInferredVisualHints } from "./query-intent.js";
 import { normalizedQueryVariants } from "./query-normalization.js";
 
 type SearchPartsInput = z.infer<typeof SearchPartsInputSchema>;
@@ -38,11 +39,12 @@ const stopWords = new Set([
 ]);
 
 export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
+  const plannedInput = withInferredVisualHints(input);
   const notes: string[] = [];
   const queries = new Set<string>();
-  queries.add(cleanWhitespace(input.query));
+  queries.add(cleanWhitespace(plannedInput.query));
 
-  const normalizedQueries = normalizedQueryVariants(input.query);
+  const normalizedQueries = normalizedQueryVariants(plannedInput.query);
   for (const query of normalizedQueries) {
     queries.add(query);
   }
@@ -50,7 +52,7 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
     notes.push(`Added supplier-friendly normalized query variants: ${normalizedQueries.join(" | ")}`);
   }
 
-  const visualQueries = visualQueryVariants(input);
+  const visualQueries = visualQueryVariants(plannedInput);
   for (const query of visualQueries) {
     queries.add(query);
   }
@@ -58,19 +60,19 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
     notes.push(`Added visual connector query variants: ${visualQueries.join(" | ")}`);
   }
 
-  const hintTerms = visualHintTerms(input);
+  const hintTerms = visualHintTerms(plannedInput);
   if (hintTerms.length > 0) {
-    queries.add(cleanWhitespace([input.query, ...hintTerms.slice(0, 4)].join(" ")));
+    queries.add(cleanWhitespace([plannedInput.query, ...hintTerms.slice(0, 4)].join(" ")));
     notes.push(`Expanded query with visual hints: ${hintTerms.slice(0, 4).join(", ")}`);
   }
 
-  if (input.categoryHint) {
-    queries.add(cleanWhitespace([input.query, input.categoryHint].join(" ")));
-    notes.push(`Expanded query with category hint: ${input.categoryHint}`);
+  if (plannedInput.categoryHint) {
+    queries.add(cleanWhitespace([plannedInput.query, plannedInput.categoryHint].join(" ")));
+    notes.push(`Expanded query with category hint: ${plannedInput.categoryHint}`);
   }
 
-  const exactish = extractExactishPartNumber(input.query);
-  if (exactish && exactish !== input.query) {
+  const exactish = extractExactishPartNumber(plannedInput.query);
+  if (exactish && exactish !== plannedInput.query) {
     queries.add(exactish);
     notes.push(`Added exact-looking part number query: ${exactish}`);
   }
@@ -85,11 +87,12 @@ export function rankAndFilterCandidates(
   candidates: PartCandidate[],
   input: SearchPartsInput
 ): RankedCandidate[] {
+  const scoringInput = withInferredVisualHints(input);
   return mergeSupplierCandidates(candidates)
-    .map((candidate) => applySearchScoring(candidate, input))
+    .map((candidate) => applySearchScoring(candidate, scoringInput))
     .filter((candidate) => candidate.match.hardConstraintPass)
     .sort(compareCandidates)
-    .slice(0, input.limit);
+    .slice(0, scoringInput.limit);
 }
 
 export function bestUnitPrice(candidate: PartCandidate, quantity = 1): number | undefined {

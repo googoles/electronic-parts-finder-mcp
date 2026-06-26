@@ -106,6 +106,29 @@ describe("search ranking", () => {
     expect(ranked[0]?.match.matched.join(" ")).toContain("pitch:");
   });
 
+  it("uses connector hints inferred from rough query text for ranking", () => {
+    const ranked = rankAndFilterCandidates(
+      [
+        candidate({
+          manufacturerPartNumber: "RIGHT-2P",
+          description: "2 Position crimp housing 2.54mm pitch gray connector"
+        }),
+        candidate({
+          manufacturerPartNumber: "WRONG-4P",
+          description: "4 Position crimp housing 2.00mm pitch black connector"
+        })
+      ],
+      {
+        query: "2핀 회색 커넥터 하우징 2.54미리",
+        limit: 10
+      }
+    );
+
+    expect(ranked[0]?.manufacturerPartNumber).toBe("RIGHT-2P");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("pin/position count: 2");
+    expect(ranked[0]?.match.matched.join(" ")).toContain("pitch:");
+  });
+
   it("does not treat measurement units as exact part-number queries", () => {
     const plan = buildSearchPlan({
       query: "2.54mm pitch 20 pin IDC connector",

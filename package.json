@@ -19,6 +19,7 @@
     "lint": "tsc --noEmit",
     "smoke:digikey": "tsx scripts/smoke-digikey-categories.ts",
     "smoke:mcp-aliexpress": "tsx scripts/smoke-mcp-aliexpress.ts",
+    "smoke:mcp-cache": "tsx scripts/smoke-mcp-cache.ts",
     "smoke:mcp-digikey": "tsx scripts/smoke-mcp-digikey.ts",
     "smoke:mcp": "tsx scripts/smoke-mcp-search.ts",
     "smoke:mcp-workflows": "tsx scripts/smoke-mcp-workflows.ts",

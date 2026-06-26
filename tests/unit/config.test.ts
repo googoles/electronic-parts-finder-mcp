@@ -8,6 +8,8 @@ describe("loadConfig", () => {
     expect(config.suppliers.mouser.enabled).toBe(false);
     expect(config.suppliers.digikey.enabled).toBe(false);
     expect(config.suppliers.aliexpress.enabled).toBe(false);
+    expect(config.cache.ttlSeconds).toBe(300);
+    expect(config.cache.dir).toBe(".cache/parts-finder");
     expect(config.suppliers.mouser.missing).toContain("MOUSER_SEARCH_API_KEY");
     expect(config.suppliers.digikey.missing).toContain("DIGIKEY_CLIENT_ID");
     expect(config.suppliers.aliexpress.missing).toContain("ALIEXPRESS_APP_KEY");

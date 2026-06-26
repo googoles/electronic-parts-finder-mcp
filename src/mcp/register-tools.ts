@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { stableCacheKey, TtlCache, type TtlCacheStats } from "../cache/ttl-cache.js";
 import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { PartsFinderConfig } from "../config/env.js";
 import { normalizeSearchQueryForSuppliers } from "../search/query-normalization.js";
@@ -50,16 +51,24 @@ function jsonResult(value: Record<string, unknown>) {
   };
 }
 
+type SupplierSearchResult = {
+  candidates: PartCandidate[];
+  rawCount: number;
+  warnings: string[];
+};
+
 export function registerTools(server: McpServer, config: PartsFinderConfig): void {
   const mouserClient = new MouserClient(config.suppliers.mouser);
   const digikeyClient = new DigiKeyClient(config.suppliers.digikey);
   const aliexpressClient = new AliExpressClient(config.suppliers.aliexpress);
+  const supplierSearchCache = new TtlCache<SupplierSearchResult>(config.cache.ttlSeconds);
 
   async function searchSuppliers(input: SearchPartsInput): Promise<{
     candidates: PartCandidate[];
     rawCount: number;
     warnings: string[];
     searchPlan: ReturnType<typeof buildSearchPlan>;
+    cache: TtlCacheStats;
   }> {
     const allowed = new Set(input.suppliers ?? supplierIds);
     const warnings: string[] = [];
@@ -68,6 +77,11 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
     const searchPlan = buildSearchPlan(input);
     const shouldSearchAliExpress = allowed.has("aliexpress") && input.constraints?.marketplaceAllowed;
 
+    for (const supplier of supplierIds) {
+      if (allowed.has(supplier) && supplier !== "aliexpress" && !config.suppliers[supplier].enabled) {
+        warnings.push(`${supplier} skipped: missing ${config.suppliers[supplier].missing.join(", ")}`);
+      }
+    }
     if (shouldSearchAliExpress && !config.suppliers.aliexpress.enabled) {
       warnings.push(
         `aliexpress skipped: missing ${config.suppliers.aliexpress.missing.join(", ")}`
@@ -75,13 +89,15 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
     }
 
     for (const query of searchPlan.queries) {
-      if (allowed.has("mouser")) {
+      if (allowed.has("mouser") && config.suppliers.mouser.enabled) {
         try {
-          const mouserResult = await mouserClient.searchKeyword({
-            query,
-            limit: input.limit,
-            inStockOnly: input.constraints?.inStockOnly
-          });
+          const mouserResult = await cachedSupplierSearch("mouser", query, input, () =>
+            mouserClient.searchKeyword({
+              query,
+              limit: input.limit,
+              inStockOnly: input.constraints?.inStockOnly
+            })
+          );
           candidates.push(...mouserResult.candidates);
           rawCount += mouserResult.rawCount;
           warnings.push(...mouserResult.warnings);
@@ -90,13 +106,15 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
         }
       }
 
-      if (allowed.has("digikey")) {
+      if (allowed.has("digikey") && config.suppliers.digikey.enabled) {
         try {
-          const digikeyResult = await digikeyClient.searchKeyword({
-            query,
-            limit: input.limit,
-            inStockOnly: input.constraints?.inStockOnly
-          });
+          const digikeyResult = await cachedSupplierSearch("digikey", query, input, () =>
+            digikeyClient.searchKeyword({
+              query,
+              limit: input.limit,
+              inStockOnly: input.constraints?.inStockOnly
+            })
+          );
           candidates.push(...digikeyResult.candidates);
           rawCount += digikeyResult.rawCount;
           warnings.push(...digikeyResult.warnings);
@@ -107,11 +125,13 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
 
       if (shouldSearchAliExpress && config.suppliers.aliexpress.enabled) {
         try {
-          const aliexpressResult = await aliexpressClient.searchKeyword({
-            query,
-            limit: input.limit,
-            marketplaceAllowed: true
-          });
+          const aliexpressResult = await cachedSupplierSearch("aliexpress", query, input, () =>
+            aliexpressClient.searchKeyword({
+              query,
+              limit: input.limit,
+              marketplaceAllowed: true
+            })
+          );
           candidates.push(...aliexpressResult.candidates);
           rawCount += aliexpressResult.rawCount;
           warnings.push(...aliexpressResult.warnings);
@@ -125,8 +145,34 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
       candidates: rankAndFilterCandidates(candidates, input),
       rawCount,
       warnings,
-      searchPlan
+      searchPlan,
+      cache: supplierSearchCache.stats()
     };
+  }
+
+  async function cachedSupplierSearch(
+    supplier: SupplierId,
+    query: string,
+    input: SearchPartsInput,
+    fetcher: () => Promise<SupplierSearchResult>
+  ): Promise<SupplierSearchResult> {
+    const key = stableCacheKey({
+      supplier,
+      query,
+      limit: input.limit,
+      constraints: {
+        inStockOnly: input.constraints?.inStockOnly,
+        marketplaceAllowed: input.constraints?.marketplaceAllowed
+      }
+    });
+    const cached = supplierSearchCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const fresh = await fetcher();
+    supplierSearchCache.set(key, fresh);
+    return fresh;
   }
 
   server.tool(
@@ -136,6 +182,7 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
     async (input) => {
       const statuses = selectedSupplierStatus(config, input.suppliers);
       const result = await searchSuppliers(input);
+      const requestedSuppliers = new Set(input.suppliers ?? supplierIds);
 
       return jsonResult({
         candidates: result.candidates,
@@ -147,7 +194,8 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
           categoryHint: input.categoryHint,
           limit: input.limit,
           marketplaceAllowed: input.constraints?.marketplaceAllowed ?? false,
-          visualHints: input.visualHints
+          visualHints: input.visualHints,
+          cache: result.cache
         },
         rawCount: result.rawCount,
         warnings: [
@@ -156,6 +204,10 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
             .filter(
               (status) =>
                 !status.enabled &&
+                (status.supplier !== "aliexpress" ||
+                  input.constraints?.marketplaceAllowed === true ||
+                  input.suppliers?.includes("aliexpress") === true) &&
+                requestedSuppliers.has(status.supplier) &&
                 !result.warnings.some((warning) => warning.startsWith(`${status.supplier} skipped:`))
             )
             .map((status) => `${status.supplier} skipped: missing ${status.missingCredentials.join(", ")}`)

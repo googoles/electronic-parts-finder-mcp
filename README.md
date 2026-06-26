@@ -13,6 +13,7 @@ Implemented:
 - Mouser Search API keyword search
 - DigiKey ProductInformation V4 keyword search
 - AliExpress Open Platform signed read-only marketplace search adapter
+- in-memory TTL cache for repeated supplier searches
 - bounded multi-query expansion from category and visual hints
 - Korean and field-language query normalization for common part terms
 - automatic connector/motor hint inference from rough query text
@@ -165,6 +166,8 @@ PARTS_FINDER_DEFAULT_COUNTRY=US
 PARTS_FINDER_DEFAULT_LANGUAGE=en
 PARTS_FINDER_DEFAULT_CURRENCY=USD
 ```
+
+`PARTS_FINDER_CACHE_TTL_SECONDS` controls the in-memory supplier search cache. The cache reduces repeated API calls across expanded queries, `lookup_part`, `compare_parts`, and BOM enrichment while the MCP server process is running. Set it to `0` to disable caching. `PARTS_FINDER_CACHE_DIR` is reserved for future persistent cache support.
 
 ### Mouser
 
@@ -328,6 +331,7 @@ Run MCP stdio smoke tests:
 
 ```bash
 npm run smoke:mcp
+npm run smoke:mcp-cache
 npm run smoke:mcp-digikey
 npm run smoke:mcp-aliexpress
 npm run smoke:mcp-workflows

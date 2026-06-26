@@ -1,6 +1,10 @@
 import type { SupplierId } from "../suppliers/supplier.js";
 
 export type PartsFinderConfig = {
+  cache: {
+    ttlSeconds: number;
+    dir: string;
+  };
   defaults: {
     country: string;
     language: string;
@@ -66,6 +70,10 @@ export function loadConfig(): PartsFinderConfig {
   ]);
 
   return {
+    cache: {
+      ttlSeconds: readOptionalNumber("PARTS_FINDER_CACHE_TTL_SECONDS") ?? 300,
+      dir: read("PARTS_FINDER_CACHE_DIR", ".cache/parts-finder")
+    },
     defaults: {
       country: read("PARTS_FINDER_DEFAULT_COUNTRY", "US"),
       language: read("PARTS_FINDER_DEFAULT_LANGUAGE", "en"),

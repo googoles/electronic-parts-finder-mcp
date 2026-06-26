@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { SearchPartsInputSchema } from "../mcp/schemas.js";
 import { extractPartFeatures, pitchMatches } from "./part-features.js";
+import { normalizedQueryVariants } from "./query-normalization.js";
 
 type SearchPartsInput = z.infer<typeof SearchPartsInputSchema>;
 
@@ -40,6 +41,14 @@ export function buildSearchPlan(input: SearchPartsInput): SearchPlan {
   const notes: string[] = [];
   const queries = new Set<string>();
   queries.add(cleanWhitespace(input.query));
+
+  const normalizedQueries = normalizedQueryVariants(input.query);
+  for (const query of normalizedQueries) {
+    queries.add(query);
+  }
+  if (normalizedQueries.length > 0) {
+    notes.push(`Added supplier-friendly normalized query variants: ${normalizedQueries.join(" | ")}`);
+  }
 
   const visualQueries = visualQueryVariants(input);
   for (const query of visualQueries) {

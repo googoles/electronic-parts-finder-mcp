@@ -13,6 +13,7 @@ Implemented:
 - Mouser Search API keyword search
 - DigiKey ProductInformation V4 keyword search
 - bounded multi-query expansion from category and visual hints
+- Korean and field-language query normalization for common part terms
 - cross-supplier candidate ranking, de-duplication, and constraint filtering
 - live lookup, comparison, alternate suggestion, and BOM enrichment flows
 - Image-observation normalization through `extract_visual_part_hints`
@@ -98,6 +99,7 @@ Version 0.1 is read-only. It must not place orders, create carts, call dropshipp
 The MCP now improves rough searches before returning results:
 
 - builds up to four bounded query variants from the original query, category hint, visual hints, and exact-looking part numbers
+- normalizes common Korean/field terms such as `2핀`, `커넥터`, `패널마운트`, `방수`, `기어모터`, and `엔코더` into supplier-friendly English search terms
 - ranks exact manufacturer or supplier part-number matches above loose keyword matches
 - merges duplicate candidates that share the same normalized manufacturer part number
 - filters hard constraints such as manufacturer, required terms, forbidden terms, max unit price, max MOQ, RoHS, and stock

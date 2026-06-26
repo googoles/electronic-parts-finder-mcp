@@ -25,6 +25,8 @@ Use the bundled `parts-finder` MCP server for read-only sourcing work.
 
 Pass hard requirements into `constraints` rather than only putting them in free text. Useful constraints include `manufacturer`, `mustHave`, `mustNotHave`, `inStockOnly`, `maxUnitPrice`, `maxMoq`, `rohsOnly`, and `marketplaceAllowed`.
 
+Korean field wording is acceptable for common part terms. The MCP normalizes phrases such as `2핀`, `커넥터`, `패널마운트`, `방수`, `기어모터`, and `엔코더` into supplier-friendly English query variants, but exact English terms or visible markings still improve results.
+
 ## Image-Based Requests
 
 When the user provides an image, use vision first and extract searchable hints before calling MCP tools:

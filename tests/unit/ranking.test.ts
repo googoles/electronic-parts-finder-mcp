@@ -112,7 +112,8 @@ describe("search ranking", () => {
       limit: 10
     });
 
-    expect(plan.queries).toEqual(["2.54mm pitch 20 pin IDC connector"]);
+    expect(plan.queries[0]).toBe("2.54mm pitch 20 pin IDC connector");
+    expect(plan.notes.join(" ")).not.toContain("exact-looking part number");
   });
 
   it("builds compact connector query variants from row count and pitch", () => {

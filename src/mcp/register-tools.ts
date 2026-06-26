@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { PartCandidate } from "../normalize/normalized-part.js";
 import type { PartsFinderConfig } from "../config/env.js";
+import { normalizeSearchQueryForSuppliers } from "../search/query-normalization.js";
 import {
   bestUnitPrice,
   buildSearchPlan,
@@ -157,11 +158,14 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
         input.motorHints?.gearhead ? "gear motor" : undefined,
         ...(input.boardContext ?? [])
       ].filter((term): term is string => Boolean(term));
+      const draftQuery = [input.userGoal, ...queryTerms].filter(Boolean).join(" ");
+      const normalizedDraft = normalizeSearchQueryForSuppliers(draftQuery);
 
       return jsonResult({
         queryTerms,
+        normalizedQueryTerms: normalizedDraft.addedTerms,
         searchPartsInputDraft: {
-          query: [input.userGoal, ...queryTerms].filter(Boolean).join(" "),
+          query: normalizedDraft.normalizedQuery,
           visualHints: input
         },
         warnings: [

@@ -9,6 +9,7 @@ import {
   isLikelyExactPart,
   rankAndFilterCandidates
 } from "../search/ranking.js";
+import { AliExpressClient } from "../suppliers/aliexpress/client.js";
 import { DigiKeyClient } from "../suppliers/digikey/client.js";
 import { MouserClient } from "../suppliers/mouser/client.js";
 import { supplierIds, type SearchPartsInput, type SupplierId, type SupplierStatus } from "../suppliers/supplier.js";
@@ -28,9 +29,7 @@ function supplierStatus(config: PartsFinderConfig): SupplierStatus[] {
     missingCredentials: config.suppliers[supplier].missing,
     rateLimit: config.suppliers[supplier].rateLimit,
     note: config.suppliers[supplier].enabled
-      ? supplier === "aliexpress"
-        ? "Configured; live adapter implementation is pending."
-        : "Configured; live search adapter is enabled."
+      ? "Configured; live search adapter is enabled."
       : "Skipped because credentials are blank in .env."
   }));
 }
@@ -54,6 +53,7 @@ function jsonResult(value: Record<string, unknown>) {
 export function registerTools(server: McpServer, config: PartsFinderConfig): void {
   const mouserClient = new MouserClient(config.suppliers.mouser);
   const digikeyClient = new DigiKeyClient(config.suppliers.digikey);
+  const aliexpressClient = new AliExpressClient(config.suppliers.aliexpress);
 
   async function searchSuppliers(input: SearchPartsInput): Promise<{
     candidates: PartCandidate[];
@@ -66,6 +66,13 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
     const candidates: PartCandidate[] = [];
     let rawCount = 0;
     const searchPlan = buildSearchPlan(input);
+    const shouldSearchAliExpress = allowed.has("aliexpress") && input.constraints?.marketplaceAllowed;
+
+    if (shouldSearchAliExpress && !config.suppliers.aliexpress.enabled) {
+      warnings.push(
+        `aliexpress skipped: missing ${config.suppliers.aliexpress.missing.join(", ")}`
+      );
+    }
 
     for (const query of searchPlan.queries) {
       if (allowed.has("mouser")) {
@@ -95,6 +102,21 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
           warnings.push(...digikeyResult.warnings);
         } catch (error) {
           warnings.push(error instanceof Error ? error.message : "DigiKey ProductInformation V4 failed.");
+        }
+      }
+
+      if (shouldSearchAliExpress && config.suppliers.aliexpress.enabled) {
+        try {
+          const aliexpressResult = await aliexpressClient.searchKeyword({
+            query,
+            limit: input.limit,
+            marketplaceAllowed: true
+          });
+          candidates.push(...aliexpressResult.candidates);
+          rawCount += aliexpressResult.rawCount;
+          warnings.push(...aliexpressResult.warnings);
+        } catch (error) {
+          warnings.push(error instanceof Error ? error.message : "AliExpress Open Platform search failed.");
         }
       }
     }
@@ -131,7 +153,11 @@ export function registerTools(server: McpServer, config: PartsFinderConfig): voi
         warnings: [
           ...result.warnings,
           ...statuses
-            .filter((status) => status.supplier !== "mouser" && status.supplier !== "digikey" && !status.enabled)
+            .filter(
+              (status) =>
+                !status.enabled &&
+                !result.warnings.some((warning) => warning.startsWith(`${status.supplier} skipped:`))
+            )
             .map((status) => `${status.supplier} skipped: missing ${status.missingCredentials.join(", ")}`)
         ]
       });

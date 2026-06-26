@@ -12,6 +12,7 @@ Implemented:
 
 - Mouser Search API keyword search
 - DigiKey ProductInformation V4 keyword search
+- AliExpress Open Platform signed read-only marketplace search adapter
 - bounded multi-query expansion from category and visual hints
 - Korean and field-language query normalization for common part terms
 - automatic connector/motor hint inference from rough query text
@@ -24,7 +25,6 @@ Implemented:
 
 Planned:
 
-- AliExpress marketplace adapter
 - supplier-specific datasheet and lifecycle enrichment
 - deeper electrical/mechanical parameter extraction from supplier attributes
 - stronger alternate-part scoring from package, pinout, ratings, and lifecycle data
@@ -40,7 +40,7 @@ flowchart TD
   E --> F["Supplier adapters"]
   F --> G["Mouser Search API"]
   F --> H["DigiKey ProductInformation V4"]
-  F --> I["AliExpress Open Platform, planned"]
+  F --> I["AliExpress Open Platform marketplace search"]
   G --> J["Normalize candidates"]
   H --> J
   I --> J
@@ -231,7 +231,9 @@ DIGIKEY_PRODUCT_INFORMATION_RATE_LIMIT_PER_DAY=1000
 
 ### AliExpress
 
-AliExpress support is planned. The config is reserved so the adapter can be added without changing deployment shape.
+AliExpress support is read-only and only participates in `search_parts` when `constraints.marketplaceAllowed` is `true`. This prevents marketplace listings from silently mixing into production distributor recommendations.
+
+The Open Platform exposes different product-search APIs depending on app approval and product line. Set `ALIEXPRESS_PRODUCT_SEARCH_PATH` to the search API path granted to your app. The default is a dropshipping-style text search path.
 
 ```env
 ALIEXPRESS_APP_KEY=
@@ -239,6 +241,7 @@ ALIEXPRESS_APP_SECRET=
 ALIEXPRESS_ACCESS_TOKEN=
 ALIEXPRESS_REFRESH_TOKEN=
 ALIEXPRESS_API_BASE_URL=https://api-sg.aliexpress.com
+ALIEXPRESS_PRODUCT_SEARCH_PATH=/aliexpress/ds/textsearch
 ALIEXPRESS_OAUTH_AUTHORIZE_URL=https://api-sg.aliexpress.com/oauth/authorize
 ALIEXPRESS_TOKEN_CREATE_PATH=/auth/token/security/create
 ALIEXPRESS_TOKEN_REFRESH_PATH=/auth/token/refresh
@@ -250,6 +253,8 @@ ALIEXPRESS_RATE_LIMIT_PER_DAY=
 ```
 
 AliExpress rate limits vary by app key, API, and app-key/API combination. Copy the approved quotas from the Open Platform console after the app is reviewed.
+
+Marketplace caveat: AliExpress results should be treated as prototyping or long-tail sourcing leads unless the exact seller, variant, dimensions, authenticity, shipping terms, and ratings are verified.
 
 ## MCP Configuration
 
@@ -324,6 +329,7 @@ Run MCP stdio smoke tests:
 ```bash
 npm run smoke:mcp
 npm run smoke:mcp-digikey
+npm run smoke:mcp-aliexpress
 npm run smoke:mcp-workflows
 ```
 

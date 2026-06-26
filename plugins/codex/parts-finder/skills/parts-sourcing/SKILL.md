@@ -12,7 +12,7 @@ Use the bundled `parts-finder` MCP server for read-only sourcing work.
 1. Extract hard constraints first: part family, electrical ratings, package, connector keying, cable length, motor voltage/power, interface, temperature range, stock, price, MOQ, and compliance.
 2. If a missing constraint could materially change the answer, ask one concise question. Otherwise search with explicit assumptions.
 3. Prefer authorized distributors such as Mouser and DigiKey for production or reliability-sensitive recommendations.
-4. Use AliExpress only when marketplace-style sourcing is appropriate, such as modules, cables, harnesses, adapters, motors, prototyping accessories, or low-cost long-tail candidates.
+4. Use AliExpress only when marketplace-style sourcing is appropriate, such as modules, cables, harnesses, adapters, motors, prototyping accessories, or low-cost long-tail candidates. Pass `marketplaceAllowed: true` explicitly.
 5. Keep all actions read-only. Do not place orders, create carts, call dropshipping APIs, or mutate supplier accounts.
 
 ## Tool Selection

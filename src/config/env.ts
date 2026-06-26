@@ -14,9 +14,17 @@ export type SupplierConfig = {
   missing: string[];
   baseUrl?: string;
   apiKey?: string;
+  appKey?: string;
+  appSecret?: string;
+  accessToken?: string;
+  refreshToken?: string;
   clientId?: string;
   clientSecret?: string;
   tokenUrl?: string;
+  productSearchPath?: string;
+  country?: string;
+  language?: string;
+  currency?: string;
   locale?: {
     site: string;
     language: string;
@@ -101,6 +109,14 @@ export function loadConfig(): PartsFinderConfig {
         enabled: aliexpressMissing.length === 0,
         missing: aliexpressMissing,
         baseUrl: read("ALIEXPRESS_API_BASE_URL", "https://api-sg.aliexpress.com"),
+        appKey: read("ALIEXPRESS_APP_KEY"),
+        appSecret: read("ALIEXPRESS_APP_SECRET"),
+        accessToken: read("ALIEXPRESS_ACCESS_TOKEN"),
+        refreshToken: read("ALIEXPRESS_REFRESH_TOKEN"),
+        productSearchPath: read("ALIEXPRESS_PRODUCT_SEARCH_PATH", "/aliexpress/ds/textsearch"),
+        country: read("ALIEXPRESS_COUNTRY", "US"),
+        currency: read("ALIEXPRESS_CURRENCY", "USD"),
+        language: read("ALIEXPRESS_LANGUAGE", "en_US"),
         rateLimit: {
           perSecond: readOptionalNumber("ALIEXPRESS_RATE_LIMIT_PER_SECOND"),
           perDay: readOptionalNumber("ALIEXPRESS_RATE_LIMIT_PER_DAY"),
